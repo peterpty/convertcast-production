@@ -48,9 +48,10 @@ interface RightPanelProps {
       status: string;
     };
   };
+  onOverlayTrigger?: (overlayType: string, overlayData: any) => void;
 }
 
-export function RightPanel({ streamId, socket, connected, stream }: RightPanelProps) {
+export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigger }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<'streaminfo' | 'chat' | 'hotleads' | 'analytics' | 'aichat' | 'offers' | 'insights' | 'scheduler'>('streaminfo');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -369,46 +370,57 @@ export function RightPanel({ streamId, socket, connected, stream }: RightPanelPr
   const handleTriggerOverlay = (action: string, data: any) => {
     console.log('🎭 Triggering overlay:', action, data);
 
-    // Broadcast overlay to all viewers via WebSocket
+    let overlayType = '';
+    let overlayData: any = {};
+
+    switch (action) {
+      case 'show-auto-offer':
+        overlayType = 'offer';
+        overlayData = {
+          id: data.trigger.id,
+          title: data.template.name,
+          description: data.template.headline,
+          originalPrice: data.template.pricing.originalPrice,
+          discountPrice: data.template.pricing.offerPrice,
+          discount: Math.round((1 - data.template.pricing.offerPrice / data.template.pricing.originalPrice) * 100),
+          timeLeft: 900, // 15 minutes
+          active: true
+        };
+        break;
+
+      case 'show-poll':
+        overlayType = 'poll';
+        overlayData = data.poll;
+        break;
+
+      case 'hide-poll':
+        overlayType = 'poll';
+        overlayData = { active: false };
+        break;
+
+      case 'hide-offer':
+        overlayType = 'offer';
+        overlayData = { active: false };
+        break;
+    }
+
+    // Update local Studio preview via callback
+    if (onOverlayTrigger) {
+      onOverlayTrigger(overlayType, overlayData);
+    }
+
+    // Broadcast overlay to all viewers via WebSocket using correct event name
     if (socket && connected) {
-      let overlayState: any = {};
-
-      switch (action) {
-        case 'show-auto-offer':
-          overlayState.offer = {
-            id: data.trigger.id,
-            title: data.template.name,
-            description: data.template.headline,
-            originalPrice: data.template.pricing.originalPrice,
-            discountPrice: data.template.pricing.offerPrice,
-            discount: Math.round((1 - data.template.pricing.offerPrice / data.template.pricing.originalPrice) * 100),
-            timeLeft: 900, // 15 minutes
-            active: true
-          };
-          break;
-
-        case 'show-poll':
-          overlayState.poll = data.poll;
-          break;
-
-        case 'hide-poll':
-          overlayState.poll = null;
-          break;
-
-        case 'hide-offer':
-          overlayState.offer = null;
-          break;
-      }
-
-      // Emit overlay update to all viewers
-      socket.emit('overlay-update', {
+      socket.emit('broadcast-overlay', {
         streamId,
-        overlayState
+        overlayType,
+        overlayData,
+        timestamp: new Date().toISOString()
       });
 
-      console.log('📡 Studio: Sent overlay update:', overlayState);
+      console.log('📡 Studio: Broadcasting overlay:', overlayType, overlayData);
     } else {
-      console.log('⚠️ Studio: Socket not connected, cannot send overlay update');
+      console.log('⚠️ Studio: Socket not connected, cannot broadcast overlay');
     }
   };
 

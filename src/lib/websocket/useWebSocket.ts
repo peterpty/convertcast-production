@@ -40,8 +40,16 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [eventLog, setEventLog] = useState<Array<{ type: string; data: any; timestamp: string }>>([]);
 
   const websocketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL;
+
+  // Log events for debugging
+  const logEvent = useCallback((type: string, data: any) => {
+    const event = { type, data, timestamp: new Date().toISOString() };
+    setEventLog(prev => [...prev.slice(-19), event]);
+    console.log(`[WebSocket Event] ${type}:`, data);
+  }, []);
 
   // Clear error and notify callback
   const handleError = useCallback((errorMessage: string) => {
@@ -79,13 +87,17 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
       return;
     }
 
-    socket.emit('broadcast-overlay', {
+    const payload = {
       streamId: config.streamId,
       overlayType,
       overlayData,
       timestamp: new Date().toISOString()
-    });
-  }, [socket, connected, config.streamId, handleError]);
+    };
+
+    console.log('📤 Broadcasting overlay:', payload);
+    logEvent('broadcast-overlay', payload);
+    socket.emit('broadcast-overlay', payload);
+  }, [socket, connected, config.streamId, handleError, logEvent]);
 
   // Send chat message
   const sendChatMessage = useCallback((message: string, username = 'Anonymous') => {
@@ -176,6 +188,7 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
     // Connection successful
     socketInstance.on('connect', () => {
       console.log('✅ WebSocket connected to', websocketUrl);
+      logEvent('connect', { socketId: socketInstance.id, url: websocketUrl });
       setConnected(true);
       setConnectionStatus('connected');
       setReconnectAttempts(0);
@@ -183,6 +196,8 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
 
       // Auto-join stream room on connection
       if (config.streamId) {
+        console.log('📡 Auto-joining stream:', config.streamId, 'as', config.userType || 'viewer');
+        logEvent('join-stream-attempt', { streamId: config.streamId, userType: config.userType });
         socketInstance.emit('join-stream', {
           streamId: config.streamId,
           userType: config.userType || 'viewer',
@@ -250,7 +265,8 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
     });
 
     socketInstance.on('overlay-update', (data) => {
-      console.log('📡 Overlay update received:', data.overlayType);
+      console.log('📡 Overlay update received:', data.overlayType, data);
+      logEvent('overlay-update', data);
       config.onOverlayUpdate?.(data);
     });
 
@@ -304,7 +320,9 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
     sendChatMessage,
     sendReaction,
     voteOnPoll,
-    error
+    error,
+    eventLog,
+    websocketUrl
   };
 }
 

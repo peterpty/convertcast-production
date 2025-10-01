@@ -387,7 +387,9 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     reconnectAttempts,
     error: websocketError,
     broadcastOverlay,
-    emit
+    emit,
+    eventLog,
+    websocketUrl
   } = useWebSocket({
     streamId: stream.id,
     userType: 'streamer',
@@ -412,7 +414,13 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
       const overlayType = Object.keys(updates)[0] || 'general';
       const overlayData = updates[Object.keys(updates)[0] as keyof OverlayState];
 
+      console.log('🎯 Studio broadcasting overlay:', overlayType, overlayData);
       broadcastOverlay(overlayType, overlayData);
+
+      // Show success feedback
+      alert(`✅ Overlay broadcast: ${overlayType}\nCheck viewer page debug panel!`);
+    } else {
+      alert('❌ WebSocket not connected - Cannot broadcast overlay');
     }
   };
 

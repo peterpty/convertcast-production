@@ -8,6 +8,7 @@ import type { Database } from '@/types/database';
 import MuxPlayer from '@mux/mux-player-react';
 import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
+import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
 import {
   Users,
   Heart,
@@ -62,13 +63,15 @@ export default function LiveViewerPage() {
     connectionStatus,
     error: websocketError,
     sendChatMessage,
-    sendReaction
+    sendReaction,
+    eventLog,
+    websocketUrl
   } = useWebSocket({
     streamId: streamId,
     userType: 'viewer',
     onViewerCountUpdate: (count: number) => setViewerCount(count),
     onOverlayUpdate: (data: any) => {
-      console.log('📡 Overlay received:', data);
+      console.log('📡 Overlay received in viewer:', data);
       setOverlayData(data);
     },
     onChatMessage: (message: any) => {
@@ -446,6 +449,16 @@ export default function LiveViewerPage() {
         </div>
       </div>
       </div>
+
+      {/* WebSocket Debug Panel */}
+      <WebSocketDebugPanel
+        connected={connected}
+        connectionStatus={connectionStatus}
+        error={websocketError}
+        streamId={streamId}
+        websocketUrl={websocketUrl}
+        eventLog={eventLog}
+      />
     </WebSocketErrorBoundary>
   );
 }

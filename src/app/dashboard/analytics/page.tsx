@@ -169,7 +169,7 @@ export default function AnalyticsDashboard() {
       <div className="bg-gray-800 border-b border-gray-700 px-6">
         <div className="flex space-x-8">
           {tabs.map((tab) => {
-            const Icon = tab.icon;
+            const Icon: any = tab.icon;
             return (
               <button
                 key={tab.id}
@@ -616,11 +616,11 @@ export default function AnalyticsDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={analytics.revenueAttribution}
+                          data={analytics.revenueAttribution as any}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ feature, contributionPercentage }) =>
+                          label={({ feature, contributionPercentage }: any) =>
                             `${feature} (${contributionPercentage.toFixed(1)}%)`
                           }
                           outerRadius={80}

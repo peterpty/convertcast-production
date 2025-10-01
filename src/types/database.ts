@@ -542,7 +542,7 @@ export interface Database {
     }
     Functions: {
       generate_access_token: {
-        Args: {}
+        Args: Record<string, never>
         Returns: string
       }
       calculate_engagement_score: {
@@ -654,17 +654,20 @@ export interface InsightEnginePredictions {
   }
 }
 
-export interface ViewerProfile extends Database['public']['Tables']['viewer_profiles']['Row'] {
-  showup_surge_data: ShowUpSurgeData
-  engagemax_data: EngageMaxData
-  autooffer_data: AutoOfferData
+type ViewerProfileRow = Database['public']['Tables']['viewer_profiles']['Row']
+export interface ViewerProfile extends ViewerProfileRow {
+  showup_surge_data?: ShowUpSurgeData
+  engagemax_data?: EngageMaxData
+  autooffer_data?: AutoOfferData
 }
 
-export interface Event extends Database['public']['Tables']['events']['Row'] {
+type EventRow = Database['public']['Tables']['events']['Row']
+export interface Event extends EventRow {
   smartscheduler_data: SmartSchedulerData
 }
 
-export interface Stream extends Database['public']['Tables']['streams']['Row'] {
+type StreamRow = Database['public']['Tables']['streams']['Row']
+export interface Stream extends StreamRow {
   engagemax_config: {
     polls_enabled: boolean
     quizzes_enabled: boolean

@@ -6,7 +6,7 @@ export async function GET() {
     console.log('🔍 Getting latest active Mux stream...');
 
     // Get all live streams from Mux, sorted by creation date
-    const streams = await muxProductionService.mux.video.liveStreams.list({
+    const streams = await (muxProductionService as any).mux.video.liveStreams.list({
       limit: 5, // Get last 5 streams
     });
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase/client';
 
 export async function GET() {
-  const results = {
+  const results: any = {
     database_connected: false,
     tables_found: [],
     auth_working: false,

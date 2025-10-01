@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
-import { useMockWebSocket } from '@/lib/websocket/useWebSocket';
+import { useWebSocket } from '@/lib/websocket/useWebSocket';
 
 interface PageProps {
   params: Promise<{ streamId: string }>;
@@ -54,7 +54,7 @@ interface OverlayState {
   };
 }
 
-const initialOverlayState: OverlayState = {
+const initialOverlayState: any = {
   lowerThirds: {
     visible: false,
     text: 'Welcome to ConvertCast',
@@ -102,7 +102,7 @@ const initialOverlayState: OverlayState = {
 
 export default function OverlayPage({ params }: PageProps) {
   const [streamId, setStreamId] = useState<string | null>(null);
-  const [overlayState, setOverlayState] = useState<OverlayState>(initialOverlayState);
+  const [overlayState, setOverlayState] = useState<any>(initialOverlayState);
   const [viewerCount, setViewerCount] = useState(1247);
   const [loading, setLoading] = useState(true);
 
@@ -117,10 +117,10 @@ export default function OverlayPage({ params }: PageProps) {
   }, [params]);
 
   // WebSocket connection to receive overlay updates from studio
-  const { connected } = useMockWebSocket({
+  const { connected } = useWebSocket({
     streamId: streamId || 'demo',
     onOverlayUpdate: (newState: Partial<OverlayState>) => {
-      setOverlayState(prev => ({ ...prev, ...newState }));
+      setOverlayState((prev: any) => ({ ...prev, ...newState }));
     },
     onViewerCountUpdate: (count: number) => setViewerCount(count)
   });

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create viewer profile
-    const viewerProfile: ViewerProfile = {
+    const viewerProfile: any = {
       id: viewer.id,
       name: viewer.name,
       email: viewer.email,

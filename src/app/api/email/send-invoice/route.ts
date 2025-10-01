@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
         <div class="invoice-details">
             <h3>💰 Payment Summary</h3>
-            ${invoiceData.lineItems.map(item => `
+            ${invoiceData.lineItems.map((item: any) => `
                 <p>${item.description}: <strong>${invoiceData.summary.currency === 'USD' ? '$' : '€'}${item.total.toFixed(2)}</strong></p>
             `).join('')}
 

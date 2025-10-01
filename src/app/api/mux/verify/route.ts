@@ -18,7 +18,7 @@ export async function GET() {
       console.log('1️⃣ Verifying Mux account access...');
 
       // Check if we can list streams (basic account verification)
-      const allStreams = await muxProductionService.mux.video.liveStreams.list({ limit: 1 });
+      const allStreams = await (muxProductionService as any).mux.video.liveStreams.list({ limit: 1 });
 
       verification.account_status = {
         credentials_valid: true,

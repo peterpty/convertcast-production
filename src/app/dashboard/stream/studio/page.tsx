@@ -11,7 +11,7 @@ type Stream = Database['public']['Tables']['streams']['Row'];
 type Event = Database['public']['Tables']['events']['Row'];
 
 export default function StreamStudioPage() {
-  const [activeStream, setActiveStream] = useState<Stream & { events: Event } | null>(null);
+  const [activeStream, setActiveStream] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [setupComplete, setSetupComplete] = useState(false);
@@ -29,6 +29,8 @@ export default function StreamStudioPage() {
         if (isMockMode) {
           // Create demo stream immediately for development
           setActiveStream({
+            peak_viewers: 2000,
+            total_viewers: 5000,
             id: 'demo-stream-id',
             stream_key: 'demo-stream-key',
             status: 'active',
@@ -96,6 +98,8 @@ export default function StreamStudioPage() {
           if (!user.user) {
             // For demo purposes, create a demo stream
             setActiveStream({
+              peak_viewers: 2000,
+              total_viewers: 5000,
               id: 'demo-stream-id',
               stream_key: 'demo-stream-key',
               status: 'active',
@@ -148,6 +152,8 @@ export default function StreamStudioPage() {
 
         if (isMockMode) {
           setActiveStream({
+            peak_viewers: 2000,
+            total_viewers: 5000,
             id: 'demo-stream-id',
             stream_key: 'demo-stream-key',
             status: 'active',

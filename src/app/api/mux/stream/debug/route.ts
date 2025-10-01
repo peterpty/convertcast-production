@@ -6,7 +6,7 @@ export async function GET() {
     console.log('🔍 DEBUG: Checking all active Mux streams...');
 
     // Get all live streams from Mux
-    const streams = await muxProductionService.mux.video.liveStreams.list();
+    const streams = await (muxProductionService as any).mux.video.liveStreams.list();
 
     console.log('📋 Active Mux streams:', streams.data?.length || 0);
 

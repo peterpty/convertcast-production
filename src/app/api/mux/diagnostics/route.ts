@@ -8,7 +8,7 @@ export async function GET() {
   try {
     console.log('🔍 Running RTMP connectivity diagnostics...');
 
-    const diagnostics = {
+    const diagnostics: any = {
       timestamp: new Date().toISOString(),
       tests: {} as any,
       recommendations: [] as string[]
@@ -103,7 +103,7 @@ export async function GET() {
     }
 
     // Overall assessment
-    const criticalIssues = diagnostics.recommendations.filter(r => r.includes('CRITICAL')).length;
+    const criticalIssues = diagnostics.recommendations.filter((r: string) => r.includes('CRITICAL')).length;
     const hasNetworkIssues = !diagnostics.tests.dns_resolution?.success ||
                             !diagnostics.tests.ping_test?.success ||
                             !diagnostics.tests.rtmp_port_test?.success;

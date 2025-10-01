@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import '../styles/instagram-overlays.css';
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Streaming Studio Responsive Optimizations */
+@layer utilities {
+  .studio-layout {
+    /* Ensure consistent zoom behavior */
+    min-width: 1200px;
+    max-width: 100vw;
+  }
+
+  .studio-column {
+    /* Prevent column collapse at high zoom levels */
+    min-width: 250px;
+    flex-shrink: 0;
+  }
+
+  .studio-center {
+    /* Ensure center column takes available space */
+    min-width: 400px;
+    flex: 1;
+  }
+
+  /* Optimizations for different zoom levels */
+  @media (max-width: 1400px) {
+    .studio-column {
+      min-width: 220px;
+    }
+  }
+
+  @media (max-width: 1200px) {
+    .studio-column {
+      min-width: 200px;
+    }
+  }
+
+  /* High DPI / High zoom adjustments */
+  @media (-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi) {
+    .studio-layout {
+      zoom: 0.9;
+    }
+  }
+}

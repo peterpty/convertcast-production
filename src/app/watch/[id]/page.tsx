@@ -57,6 +57,7 @@ export default function LiveViewerPage() {
   const [userReacted, setUserReacted] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
+  const [actualStreamId, setActualStreamId] = useState<string | null>(null);
 
   // Transform WebSocket overlay data to OverlayState format
   const overlayState = overlayData ? {
@@ -93,6 +94,7 @@ export default function LiveViewerPage() {
   } : null;
 
   // WebSocket connection for real-time features
+  // CRITICAL: Use actual database stream ID, not playback ID from URL
   const {
     connected,
     connectionStatus,
@@ -102,7 +104,7 @@ export default function LiveViewerPage() {
     eventLog,
     websocketUrl
   } = useWebSocket({
-    streamId: streamId,
+    streamId: actualStreamId || streamId, // Use database ID once loaded
     userType: 'viewer',
     onViewerCountUpdate: (count: number) => setViewerCount(count),
     onOverlayUpdate: (data: any) => {
@@ -199,8 +201,10 @@ export default function LiveViewerPage() {
         }
 
         setStreamData(stream as StreamWithEvent);
+        setActualStreamId(stream.id); // Set actual database stream ID for WebSocket room
         setViewerCount(stream.peak_viewers || 1847);
         setLoading(false);
+        console.log('✅ Viewer: Using database stream ID for WebSocket:', stream.id);
       } catch (err) {
         console.error('Error loading stream:', err);
         setError('Failed to load stream');
@@ -378,7 +382,7 @@ export default function LiveViewerPage() {
                     <OverlayRenderer
                       overlayState={overlayState}
                       viewerCount={viewerCount}
-                      streamId={streamId}
+                      streamId={actualStreamId || streamId}
                       connected={connected}
                     />
                   </div>

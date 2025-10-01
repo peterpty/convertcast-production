@@ -362,11 +362,15 @@ export function OverlayRenderer({ overlayState, viewerCount, streamId, connected
               <div className="text-white font-bold text-xl mb-4">{overlayState.engageMax.currentPoll.question}</div>
               
               <div className="space-y-2">
-                {overlayState.engageMax.currentPoll.options.map((option, index) => (
-                  <div key={index} className="bg-purple-600/30 border border-purple-400 rounded-lg p-3 text-left hover:bg-purple-600/50 cursor-pointer transition-colors">
-                    <span className="text-white font-medium">{index + 1}. {option}</span>
-                  </div>
-                ))}
+                {overlayState.engageMax.currentPoll.options.map((option, index) => {
+                  // Handle both string and object formats
+                  const optionText = typeof option === 'string' ? option : option.text || option;
+                  return (
+                    <div key={index} className="bg-purple-600/30 border border-purple-400 rounded-lg p-3 text-left hover:bg-purple-600/50 cursor-pointer transition-colors">
+                      <span className="text-white font-medium">{index + 1}. {optionText}</span>
+                    </div>
+                  );
+                })}
               </div>
               
               <div className="mt-4 text-gray-400 text-sm">

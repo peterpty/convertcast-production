@@ -2,7 +2,8 @@
 
 import Mailgun from 'mailgun.js';
 import formData from 'form-data';
-import { Twilio } from 'twilio';
+// TODO: Re-enable Twilio when notifications are ready for production
+// import { Twilio } from 'twilio';
 import { NotificationChannel, NotificationSchedule, NotificationStatus } from './showUpSurgeEngine';
 
 export interface DeliveryProvider {
@@ -36,6 +37,7 @@ export interface DeliveryMetrics {
  * Handles email, SMS, WhatsApp, and push notification delivery
  */
 export class DeliveryEngine {
+  // TODO: Re-enable notification clients when ready for production
   private mailgun: any;
   private twilio: any;
   private providers: Map<NotificationChannel, DeliveryProvider[]> = new Map();
@@ -107,14 +109,14 @@ export class DeliveryEngine {
       });
     }
 
-    // Initialize Twilio
-    const smsProvider = this.providers.get('sms')?.[0];
-    if (smsProvider?.isEnabled) {
-      this.twilio = new Twilio(
-        smsProvider.config.accountSid,
-        smsProvider.config.authToken
-      );
-    }
+    // TODO: Re-enable Twilio when notifications are ready
+    // const smsProvider = this.providers.get('sms')?.[0];
+    // if (smsProvider?.isEnabled) {
+    //   this.twilio = new Twilio(
+    //     smsProvider.config.accountSid,
+    //     smsProvider.config.authToken
+    //   );
+    // }
   }
 
   /**
@@ -132,24 +134,33 @@ export class DeliveryEngine {
     const startTime = Date.now();
 
     try {
-      let result: DeliveryResult;
+      // TODO: Re-enable actual notification sending when ready for production
+      console.log(`📧 Notification stubbed: ${schedule.channel} to ${recipient.name || recipient.email}`);
 
-      switch (schedule.channel) {
-        case 'email':
-          result = await this.sendEmail(schedule, recipient);
-          break;
-        case 'sms':
-          result = await this.sendSMS(schedule, recipient);
-          break;
-        case 'whatsapp':
-          result = await this.sendWhatsApp(schedule, recipient);
-          break;
-        case 'push':
-          result = await this.sendPushNotification(schedule, recipient);
-          break;
-        default:
-          throw new Error(`Unsupported channel: ${schedule.channel}`);
-      }
+      const result: DeliveryResult = {
+        success: true,
+        messageId: `stubbed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        deliveredAt: new Date(),
+        provider: 'Stubbed'
+      };
+
+      // let result: DeliveryResult;
+      // switch (schedule.channel) {
+      //   case 'email':
+      //     result = await this.sendEmail(schedule, recipient);
+      //     break;
+      //   case 'sms':
+      //     result = await this.sendSMS(schedule, recipient);
+      //     break;
+      //   case 'whatsapp':
+      //     result = await this.sendWhatsApp(schedule, recipient);
+      //     break;
+      //   case 'push':
+      //     result = await this.sendPushNotification(schedule, recipient);
+      //     break;
+      //   default:
+      //     throw new Error(`Unsupported channel: ${schedule.channel}`);
+      // }
 
       // Update metrics
       this.updateDeliveryMetrics(schedule.channel, 'Mailgun', result, Date.now() - startTime);

@@ -12,7 +12,8 @@ import {
 import { EmailTemplate, EmailTemplateEngine, emailTemplateEngine, EventDetails } from './emailTemplates';
 import { DeliveryEngine, deliveryEngine, DeliveryResult } from './deliveryEngine';
 import { AbandonedCartRecovery, abandonedCartRecovery } from './abandonedCartRecovery';
-import * as cron from 'node-cron';
+// TODO: Re-enable node-cron when notifications are ready for production
+// import * as cron from 'node-cron';
 import { addMinutes, addHours, addDays, isBefore, isAfter } from 'date-fns';
 
 export interface NotificationEvent {
@@ -72,7 +73,8 @@ export interface CampaignMetrics {
 export class NotificationManager {
   private events: Map<string, NotificationEvent> = new Map();
   private registrations: Map<string, EventRegistration> = new Map();
-  private scheduledJobs: Map<string, cron.ScheduledTask> = new Map();
+  // TODO: Re-enable cron.ScheduledTask when notifications are ready
+  private scheduledJobs: Map<string, any> = new Map();
   private campaignMetrics: Map<string, CampaignMetrics> = new Map();
   private isActive: boolean = false;
 
@@ -86,14 +88,13 @@ export class NotificationManager {
   private startScheduler(): void {
     this.isActive = true;
 
-    // Run every minute to check for scheduled notifications
-    const task = cron.schedule('* * * * *', () => {
-      this.processScheduledNotifications();
-    }, {
-      scheduled: false
-    });
-
-    task.start();
+    // TODO: Re-enable cron scheduler when notifications are ready
+    // const task = cron.schedule('* * * * *', () => {
+    //   this.processScheduledNotifications();
+    // }, {
+    //   scheduled: false
+    // });
+    // task.start();
     console.log('🚀 ShowUp Surge notification scheduler started');
   }
 
@@ -214,24 +215,20 @@ export class NotificationManager {
     schedule.forEach(notification => {
       const jobId = `${registration.id}-${notification.templateId}`;
 
-      // Create cron job for each notification
-      const cronExpression = this.generateCronExpression(notification.scheduledAt);
+      // TODO: Re-enable cron scheduling when notifications are ready
+      // const cronExpression = this.generateCronExpression(notification.scheduledAt);
+      // const job = cron.schedule(cronExpression, async () => {
+      //   await this.sendNotification(notification, registration);
+      //   const scheduledJob = this.scheduledJobs.get(jobId);
+      //   if (scheduledJob) {
+      //     scheduledJob.destroy();
+      //     this.scheduledJobs.delete(jobId);
+      //   }
+      // }, { scheduled: false });
+      // job.start();
+      // this.scheduledJobs.set(jobId, job);
 
-      const job = cron.schedule(cronExpression, async () => {
-        await this.sendNotification(notification, registration);
-
-        // Remove job after execution
-        const scheduledJob = this.scheduledJobs.get(jobId);
-        if (scheduledJob) {
-          scheduledJob.destroy();
-          this.scheduledJobs.delete(jobId);
-        }
-      }, {
-        scheduled: false
-      });
-
-      job.start();
-      this.scheduledJobs.set(jobId, job);
+      console.log(`⏰ Notification scheduled (stubbed): ${notification.templateId} for ${registration.viewer.name}`);
 
       console.log(`⏰ Scheduled: ${notification.templateId} for ${registration.viewer.name} at ${notification.scheduledAt.toISOString()}`);
     });
@@ -662,8 +659,8 @@ export class NotificationManager {
   stopScheduler(): void {
     this.isActive = false;
 
-    // Destroy all scheduled jobs
-    this.scheduledJobs.forEach(job => job.destroy());
+    // TODO: Re-enable job destruction when notifications are ready
+    // this.scheduledJobs.forEach(job => job.destroy());
     this.scheduledJobs.clear();
 
     console.log('🛑 ShowUp Surge notification scheduler stopped');

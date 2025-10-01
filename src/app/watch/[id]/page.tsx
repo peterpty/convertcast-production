@@ -9,6 +9,7 @@ import MuxPlayer from '@mux/mux-player-react';
 import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
 import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
+import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
 import {
   Users,
   Heart,
@@ -56,6 +57,40 @@ export default function LiveViewerPage() {
   const [userReacted, setUserReacted] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
+
+  // Transform WebSocket overlay data to OverlayState format
+  const overlayState = overlayData ? {
+    lowerThirds: { visible: false, text: '', subtext: '', position: 'bottom-left' as const, style: 'branded' as const },
+    countdown: { visible: false, targetTime: '', message: '', style: 'digital' as const },
+    registrationCTA: { visible: false, headline: '', buttonText: '', urgency: false, position: 'bottom-center' as const },
+    socialProof: { visible: false, type: 'viewer-count' as const, position: 'top-right' as const },
+    engageMax: {
+      currentPoll: overlayData.overlayType === 'poll' ? {
+        id: overlayData.overlayData?.id || null,
+        question: overlayData.overlayData?.question || '',
+        options: overlayData.overlayData?.options || [],
+        visible: overlayData.overlayData?.active !== false
+      } : {
+        id: null,
+        question: '',
+        options: [],
+        visible: false
+      },
+      reactions: { enabled: true, position: 'floating' as const },
+      smartCTA: overlayData.overlayType === 'offer' ? {
+        visible: overlayData.overlayData?.active !== false,
+        message: overlayData.overlayData?.description || overlayData.overlayData?.title || '',
+        action: 'register',
+        trigger: 'manual' as const
+      } : {
+        visible: false,
+        message: '',
+        action: 'register',
+        trigger: 'manual' as const
+      }
+    },
+    celebrations: { enabled: false }
+  } : null;
 
   // WebSocket connection for real-time features
   const {
@@ -330,12 +365,24 @@ export default function LiveViewerPage() {
                 )}
 
                 {/* Live Overlay */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-10">
                   <div className="bg-red-600/90 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1 backdrop-blur-sm">
                     <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     LIVE
                   </div>
                 </div>
+
+                {/* Interactive Overlays from Studio */}
+                {overlayState && (
+                  <div className="absolute inset-0 z-20 pointer-events-none">
+                    <OverlayRenderer
+                      overlayState={overlayState}
+                      viewerCount={viewerCount}
+                      streamId={streamId}
+                      connected={connected}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

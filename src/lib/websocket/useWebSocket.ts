@@ -28,7 +28,7 @@ interface WebSocketReturn {
   joinStream: (streamId: string, userType?: string, userId?: string) => void;
   leaveStream: (streamId?: string) => void;
   broadcastOverlay: (overlayType: string, overlayData: any) => void;
-  sendChatMessage: (message: string, username?: string) => void;
+  sendChatMessage: (message: string, username?: string, isPrivate?: boolean) => void;
   sendReaction: (reactionType: string) => void;
   voteOnPoll: (pollId: string, optionId: string) => void;
   error: string | null;
@@ -100,7 +100,7 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
   }, [socket, connected, config.streamId, handleError, logEvent]);
 
   // Send chat message
-  const sendChatMessage = useCallback((message: string, username = 'Anonymous') => {
+  const sendChatMessage = useCallback((message: string, username = 'Anonymous', isPrivate = false) => {
     if (!socket || !connected) {
       handleError('Cannot send message - WebSocket disconnected');
       return;
@@ -110,9 +110,11 @@ export function useWebSocket(config: WebSocketConfig): WebSocketReturn {
       streamId: config.streamId,
       message: message.substring(0, 500),
       username,
+      userId: config.userId || socket.id,
+      isPrivate,
       timestamp: new Date().toISOString()
     });
-  }, [socket, connected, config.streamId, handleError]);
+  }, [socket, connected, config.streamId, config.userId, handleError]);
 
   // Send viewer reaction
   const sendReaction = useCallback((reactionType: string) => {

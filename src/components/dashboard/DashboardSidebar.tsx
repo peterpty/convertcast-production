@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ConvertCastLogo } from '@/components/ui/ConvertCastLogo';
+import { useAuth } from '@/lib/auth/AuthContext';
 import {
   LayoutDashboard,
   Calendar,
@@ -41,6 +42,15 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return (
     <motion.div
@@ -78,16 +88,26 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
       {/* User Profile Section */}
       <div className="p-6 border-b border-purple-500/20">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
+          {user?.user_metadata?.avatar_url ? (
+            <img
+              src={user.user_metadata.avatar_url}
+              alt="User avatar"
+              className="w-10 h-10 rounded-full"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+              <User className="w-5 h-5 text-white" />
+            </div>
+          )}
           <motion.div
             className="flex-1 min-w-0"
             animate={{ opacity: isCollapsed ? 0 : 1 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-sm font-semibold text-white truncate">John Doe</p>
-            <p className="text-xs text-purple-300 truncate">john@company.com</p>
+            <p className="text-sm font-semibold text-white truncate">
+              {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+            </p>
+            <p className="text-xs text-purple-300 truncate">{user?.email || 'user@example.com'}</p>
           </motion.div>
         </div>
       </div>
@@ -148,6 +168,7 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
       {/* Logout Button */}
       <div className="p-4 border-t border-purple-500/20">
         <button
+          onClick={handleSignOut}
           className="w-full flex items-center px-4 py-3 text-purple-200 hover:text-white hover:bg-red-600/10 rounded-xl transition-all duration-200 group"
         >
           <LogOut className="w-5 h-5 text-red-400" />

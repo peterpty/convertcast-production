@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Socket } from 'socket.io-client';
+import { ChatService } from '@/lib/supabase/chatService';
 import { ViewerProfile } from '@/lib/ai/scoringEngine';
 
 interface ChatMessage {
@@ -18,6 +20,8 @@ interface AILiveChatProps {
   viewers: ViewerProfile[];
   onTriggerOverlay: (action: string, data: any) => void;
   streamId: string;
+  socket?: Socket | null;
+  connected?: boolean;
 }
 
 const SYNTHETIC_TESTIMONIALS = [
@@ -66,7 +70,7 @@ const AVATARS = [
   '👩‍🌾', '👨‍🍳', '👩‍🎤', '👨‍🎨', '👩‍💻', '👨‍⚕️', '👩‍🏫', '👨‍🔬'
 ];
 
-export function AILiveChat({ viewers, onTriggerOverlay, streamId }: AILiveChatProps) {
+export function AILiveChat({ viewers, onTriggerOverlay, streamId, socket, connected }: AILiveChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [syntheticEnabled, setSyntheticEnabled] = useState(true);
   const [streamerMessage, setStreamerMessage] = useState('');
@@ -102,7 +106,7 @@ export function AILiveChat({ viewers, onTriggerOverlay, streamId }: AILiveChatPr
     };
   }, [syntheticEnabled, chatFrequency, viewers]);
 
-  const generateSyntheticMessage = () => {
+  const generateSyntheticMessage = async () => {
     if (viewers.length === 0) return;
 
     const messageType = Math.random();
@@ -147,9 +151,11 @@ export function AILiveChat({ viewers, onTriggerOverlay, streamId }: AILiveChatPr
       intentLevel = 'LUKEWARM';
     }
 
+    const username = SYNTHETIC_NAMES[Math.floor(Math.random() * SYNTHETIC_NAMES.length)];
+
     const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      username: SYNTHETIC_NAMES[Math.floor(Math.random() * SYNTHETIC_NAMES.length)],
+      id: `synthetic_${Date.now()}`,
+      username,
       message,
       timestamp: new Date(),
       isStreamer: false,
@@ -158,10 +164,37 @@ export function AILiveChat({ viewers, onTriggerOverlay, streamId }: AILiveChatPr
       avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)]
     };
 
+    // Save to Supabase for persistence
+    const intentScore = intentLevel === 'JACKPOT' ? 0.95 :
+                       intentLevel === 'HOT_LEAD' ? 0.85 :
+                       intentLevel === 'WARM' ? 0.70 :
+                       intentLevel === 'LUKEWARM' ? 0.55 : 0.40;
+
+    await ChatService.saveMessage(
+      streamId,
+      message,
+      username,
+      null, // No viewer profile for synthetic
+      true, // is_synthetic
+      { buying_intent: intentScore, engagement_score: 0.75, sentiment: 'positive' }
+    );
+
+    // Broadcast via WebSocket to all viewers
+    if (socket && connected) {
+      socket.emit('send-chat-message', {
+        streamId,
+        message,
+        username,
+        userId: `synthetic_${Date.now()}`,
+        timestamp: new Date().toISOString()
+      });
+      console.log('📡 AI Chat: Broadcasted synthetic message via WebSocket');
+    }
+
     setMessages(prev => [...prev.slice(-49), newMessage]); // Keep last 50 messages
   };
 
-  const handleStreamerSend = () => {
+  const handleStreamerSend = async () => {
     if (!streamerMessage.trim()) return;
 
     const newMessage: ChatMessage = {
@@ -174,12 +207,32 @@ export function AILiveChat({ viewers, onTriggerOverlay, streamId }: AILiveChatPr
       avatar: '🎙️'
     };
 
+    // Save to Supabase
+    await ChatService.saveMessage(
+      streamId,
+      streamerMessage,
+      'Streamer',
+      null,
+      false
+    );
+
+    // Broadcast via WebSocket
+    if (socket && connected) {
+      socket.emit('send-chat-message', {
+        streamId,
+        message: streamerMessage,
+        username: 'Streamer',
+        userId: 'streamer',
+        timestamp: new Date().toISOString()
+      });
+    }
+
     setMessages(prev => [...prev.slice(-49), newMessage]);
     setStreamerMessage('');
     setIsStreamerOverride(false);
   };
 
-  const handleQuickResponse = (response: string) => {
+  const handleQuickResponse = async (response: string) => {
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       username: 'Streamer',
@@ -189,6 +242,19 @@ export function AILiveChat({ viewers, onTriggerOverlay, streamId }: AILiveChatPr
       isSynthetic: false,
       avatar: '🎙️'
     };
+
+    // Save and broadcast
+    await ChatService.saveMessage(streamId, response, 'Streamer', null, false);
+
+    if (socket && connected) {
+      socket.emit('send-chat-message', {
+        streamId,
+        message: response,
+        username: 'Streamer',
+        userId: 'streamer',
+        timestamp: new Date().toISOString()
+      });
+    }
 
     setMessages(prev => [...prev.slice(-49), newMessage]);
   };

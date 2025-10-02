@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
+import { Lock, Unlock } from 'lucide-react';
+import { ChatService } from '@/lib/supabase/chatService';
 import { HotLeadPanel } from '@/components/ai/HotLeadPanel';
 import { AILiveChat } from '@/components/ai/AILiveChat';
 import { AutoOfferPanel } from '@/components/ai/AutoOfferPanel';
@@ -18,6 +20,8 @@ interface ChatMessage {
   message: string;
   timestamp: string;
   is_synthetic?: boolean;
+  is_private?: boolean;
+  sender_id?: string;
   intent_signals?: {
     buying_intent: number;
     engagement_score: number;
@@ -59,6 +63,7 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
   const [viewers, setViewers] = useState<ViewerProfile[]>([]);
   const [streamMetrics, setStreamMetrics] = useState<any>({});
   const [newMessage, setNewMessage] = useState('');
+  const [isPrivateMessage, setIsPrivateMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize AI Suite and mock data
@@ -222,30 +227,8 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
       totalViewers: mockViewers.length
     });
 
-    // Initialize chat messages (legacy)
-    setMessages([
-      {
-        id: '1',
-        viewer_name: 'Sarah M.',
-        message: 'This is exactly what I needed! 😍',
-        timestamp: new Date(Date.now() - 300000).toISOString(),
-        intent_signals: { buying_intent: 0.85, engagement_score: 0.92, sentiment: 'very_positive' }
-      },
-      {
-        id: '2',
-        viewer_name: 'Mike K.',
-        message: 'Great insights, thank you for sharing!',
-        timestamp: new Date(Date.now() - 240000).toISOString(),
-        intent_signals: { buying_intent: 0.65, engagement_score: 0.78, sentiment: 'positive' }
-      },
-      {
-        id: '3',
-        viewer_name: 'Lisa R.',
-        message: 'Can you share more details about the advanced features?',
-        timestamp: new Date(Date.now() - 180000).toISOString(),
-        intent_signals: { buying_intent: 0.92, engagement_score: 0.88, sentiment: 'interested' }
-      }
-    ]);
+    // Initialize chat messages (empty - will load from Supabase)
+    // Messages will be loaded via chat history and Supabase Realtime subscription
 
     // Legacy hot leads for compatibility
     setHotLeads([
@@ -281,23 +264,90 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
     });
   }, []);
 
+  // Load chat history from Supabase
+  useEffect(() => {
+    async function loadChatHistory() {
+      if (!streamId) return;
+
+      console.log('📜 Streamer: Loading chat history...');
+      const messages = await ChatService.getMessages(streamId, 50);
+
+      if (messages.length > 0) {
+        console.log(`✅ Streamer: Loaded ${messages.length} messages`);
+        const formatted = messages.map(msg => ({
+          id: msg.id,
+          viewer_name: msg.viewer_profiles?.first_name || 'Anonymous',
+          message: msg.message,
+          timestamp: msg.created_at,
+          is_synthetic: msg.is_synthetic,
+          intent_signals: msg.intent_signals
+        }));
+        setMessages(formatted);
+      }
+    }
+
+    loadChatHistory();
+  }, [streamId]);
+
+  // Subscribe to Supabase Realtime (fallback/redundancy)
+  useEffect(() => {
+    if (!streamId) return;
+
+    console.log('📡 Streamer: Setting up Supabase Realtime subscription...');
+    const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
+      console.log('📨 Streamer: New message from Supabase Realtime');
+
+      const formatted: ChatMessage = {
+        id: message.id,
+        viewer_name: message.viewer_profiles?.first_name || 'Anonymous',
+        message: message.message,
+        timestamp: message.created_at,
+        is_synthetic: message.is_synthetic,
+        intent_signals: message.intent_signals
+      };
+
+      // Add if not duplicate
+      setMessages(prev => {
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [...prev, formatted];
+      });
+    });
+
+    return () => {
+      console.log('🔌 Streamer: Unsubscribing from Supabase Realtime');
+      unsubscribe();
+    };
+  }, [streamId]);
+
   // Listen for new messages from WebSocket
   useEffect(() => {
     if (socket && connected) {
-      socket.on('chat-message', (message: ChatMessage) => {
-        setMessages(prev => [...prev, message]);
-        
+      socket.on('chat-message', (message: any) => {
+        // Transform WebSocket message format to ChatMessage format
+        const chatMessage: ChatMessage = {
+          id: message.messageId || Date.now().toString(),
+          viewer_name: message.username || 'Anonymous',
+          message: message.message,
+          timestamp: message.timestamp,
+          is_synthetic: false,
+          is_private: message.isPrivate || false,
+          sender_id: message.userId,
+          intent_signals: message.intent_signals
+        };
+
+        setMessages(prev => [...prev, chatMessage]);
+
         // Check if this is a hot lead
-        if (message.intent_signals && message.intent_signals.buying_intent > 0.8) {
+        if (chatMessage.intent_signals && chatMessage.intent_signals.buying_intent > 0.8) {
           // Add to hot leads if not already there
           setHotLeads(prev => {
-            const exists = prev.some(lead => lead.email === `${message.viewer_name.toLowerCase().replace(' ', '.')}@example.com`);
+            const exists = prev.some(lead => lead.email === `${chatMessage.viewer_name.toLowerCase().replace(' ', '.')}@example.com`);
             if (!exists) {
               const newLead: HotLead = {
                 id: Date.now().toString(),
-                name: message.viewer_name,
-                email: `${message.viewer_name.toLowerCase().replace(' ', '.')}@example.com`,
-                intent_score: Math.round(message.intent_signals!.buying_intent * 100),
+                name: chatMessage.viewer_name,
+                email: `${chatMessage.viewer_name.toLowerCase().replace(' ', '.')}@example.com`,
+                intent_score: Math.round(chatMessage.intent_signals!.buying_intent * 100),
                 engagement_time: Math.round(Math.random() * 2000 + 500),
                 interactions: Math.round(Math.random() * 20 + 1),
                 last_activity: 'Recent chat activity',
@@ -323,21 +373,19 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
 
   const handleSendMessage = () => {
     if (newMessage.trim() && socket && connected) {
-      const message: ChatMessage = {
-        id: Date.now().toString(),
-        viewer_name: 'Streamer',
-        message: newMessage.trim(),
-        timestamp: new Date().toISOString(),
-        is_synthetic: false
-      };
-
-      socket.emit('chat-message', {
+      // Send message via WebSocket - it will echo back and be added by the listener
+      // No optimistic update needed to avoid duplicates
+      socket.emit('send-chat-message', {
         streamId,
-        message
+        message: newMessage.trim(),
+        username: 'Streamer',
+        userId: 'streamer',
+        isPrivate: isPrivateMessage,
+        timestamp: new Date().toISOString()
       });
 
-      setMessages(prev => [...prev, message]);
       setNewMessage('');
+      setIsPrivateMessage(false); // Reset to public after sending
     }
   };
 
@@ -681,6 +729,8 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
               viewers={viewers}
               onTriggerOverlay={handleTriggerOverlay}
               streamId={streamId}
+              socket={socket}
+              connected={connected}
             />
           </div>
         )}
@@ -720,12 +770,27 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.map((message) => (
-                <div key={message.id} className="bg-gray-800 rounded-lg p-3">
+                <div
+                  key={message.id}
+                  className={`rounded-lg p-3 ${
+                    message.is_private
+                      ? 'bg-purple-900/40 border border-purple-500/40'
+                      : 'bg-gray-800'
+                  }`}
+                >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center space-x-2">
+                      {message.is_private && (
+                        <Lock className="w-3 h-3 text-purple-400" />
+                      )}
                       <span className="text-white font-medium text-sm">
                         {message.viewer_name}
                       </span>
+                      {message.is_private && (
+                        <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
+                          Private
+                        </span>
+                      )}
                       {message.intent_signals && message.intent_signals.buying_intent > 0.8 && (
                         <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">
                           🔥 HOT
@@ -760,19 +825,55 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
             
             {/* Message Input */}
             <div className="p-3 border-t border-gray-700">
+              {/* Private Message Toggle */}
+              <div className="mb-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsPrivateMessage(!isPrivateMessage)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                    isPrivateMessage
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-400 hover:text-purple-300'
+                  }`}
+                >
+                  {isPrivateMessage ? (
+                    <>
+                      <Lock className="w-3 h-3" />
+                      Private Message
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-3 h-3" />
+                      Public Message
+                    </>
+                  )}
+                </button>
+                {isPrivateMessage && (
+                  <span className="text-xs text-purple-300">
+                    Only visible to specific viewer
+                  </span>
+                )}
+              </div>
+
               <div className="flex space-x-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Send a message to viewers..."
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-purple-500"
+                  placeholder={isPrivateMessage ? "Send private message..." : "Send a message to viewers..."}
+                  className={`flex-1 px-3 py-2 bg-gray-700 border ${
+                    isPrivateMessage ? 'border-purple-500' : 'border-gray-600'
+                  } rounded text-white text-sm focus:outline-none focus:border-purple-500`}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || !connected}
-                  className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`px-3 py-2 ${
+                    isPrivateMessage
+                      ? 'bg-purple-700 hover:bg-purple-800'
+                      : 'bg-purple-600 hover:bg-purple-700'
+                  } text-white text-sm rounded disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   Send
                 </button>

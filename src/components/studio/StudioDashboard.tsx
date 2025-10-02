@@ -636,7 +636,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
           {/* RIGHT: Live Dashboard */}
           <div className="flex-1 bg-slate-900/40 backdrop-blur-xl border border-slate-700/30 rounded-2xl overflow-hidden">
             <RightPanel
-              streamId={stream.id}
+              streamId={muxStream?.playback_id || stream.mux_playback_id || stream.id}
               socket={socket}
               connected={connected}
               stream={{

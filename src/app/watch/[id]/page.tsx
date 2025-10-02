@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
+import { ChatService } from '@/lib/supabase/chatService';
 import type { Database } from '@/types/database';
 import MuxPlayer from '@mux/mux-player-react';
 import { useWebSocket } from '@/lib/websocket/useWebSocket';
@@ -20,7 +21,9 @@ import {
   Share2,
   Settings,
   Play,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 type Stream = Database['public']['Tables']['streams']['Row'];
@@ -40,6 +43,8 @@ interface ChatMessageWithProfile {
     last_name: string;
   } | null;
   is_synthetic: boolean;
+  is_private?: boolean;
+  sender_id?: string;
   status: 'active' | 'removed' | 'deleted' | 'pinned' | 'synthetic';
 }
 
@@ -48,11 +53,15 @@ export default function LiveViewerPage() {
   const streamId = params.id as string;
   const chatRef = useRef<HTMLDivElement>(null);
 
+  // Generate a unique viewer ID for this session
+  const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
+
   const [streamData, setStreamData] = useState<StreamWithEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessageWithProfile[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isPrivateMessage, setIsPrivateMessage] = useState(false);
   const [reactions, setReactions] = useState<{ [key: string]: number }>({ heart: 0, thumbs: 0, star: 0 });
   const [userReacted, setUserReacted] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
@@ -135,15 +144,29 @@ export default function LiveViewerPage() {
       setOverlayData(data);
     },
     onChatMessage: (message: any) => {
+      // Detect if message is from streamer/host
+      const isHost = message.username === 'Streamer' || message.userId === 'streamer';
+
+      // Filter private messages - only show if:
+      // 1. Message is public (not private)
+      // 2. Message is from the current viewer (message.userId === viewerId)
+      // 3. Message is from the host (isHost === true)
+      if (message.isPrivate && message.userId !== viewerId && !isHost) {
+        console.log('🔒 Filtering out private message from another viewer');
+        return; // Don't show private messages from other viewers
+      }
+
       const chatMessage: ChatMessageWithProfile = {
         id: message.id || Date.now().toString(),
         message: message.message,
         created_at: message.timestamp || new Date().toISOString(),
         is_synthetic: false,
+        is_private: message.isPrivate || false,
+        sender_id: message.userId,
         status: 'active',
         viewer_profiles: {
-          first_name: message.username || 'Anonymous',
-          last_name: 'Viewer'
+          first_name: isHost ? 'Host' : (message.username || 'Anonymous'),
+          last_name: isHost ? '' : ''
         }
       };
       setChatMessages(prev => [...prev, chatMessage]);
@@ -158,6 +181,53 @@ export default function LiveViewerPage() {
       console.error('Viewer WebSocket error:', error);
     }
   });
+
+  // Load chat history from Supabase
+  useEffect(() => {
+    async function loadChatHistory() {
+      if (!streamId) return;
+
+      console.log('📜 Loading chat history for stream:', streamId);
+      const messages = await ChatService.getMessages(streamId, 50);
+
+      if (messages.length > 0) {
+        console.log(`✅ Loaded ${messages.length} chat messages from history`);
+        const formattedMessages = messages.map(msg => ({
+          id: msg.id,
+          message: msg.message,
+          created_at: msg.created_at,
+          is_synthetic: msg.is_synthetic,
+          status: msg.status,
+          viewer_profiles: msg.viewer_profiles
+        }));
+        setChatMessages(formattedMessages);
+      }
+    }
+
+    loadChatHistory();
+  }, [streamId]);
+
+  // Subscribe to Supabase Realtime for chat messages (fallback/redundancy)
+  useEffect(() => {
+    if (!streamId) return;
+
+    console.log('📡 Setting up Supabase Realtime subscription for chat...');
+    const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
+      console.log('📨 New message from Supabase Realtime:', message);
+
+      // Add message if not already present (avoid duplicates from WebSocket)
+      setChatMessages(prev => {
+        const exists = prev.some(m => m.id === message.id);
+        if (exists) return prev;
+        return [...prev, message];
+      });
+    });
+
+    return () => {
+      console.log('🔌 Cleaning up Supabase Realtime subscription');
+      unsubscribe();
+    };
+  }, [streamId]);
 
   // Load stream data from Supabase
   useEffect(() => {
@@ -262,8 +332,8 @@ export default function LiveViewerPage() {
     if (!newMessage.trim()) return;
 
     if (connected) {
-      // Send message via WebSocket
-      sendChatMessage(newMessage, 'Anonymous Viewer');
+      // Send message via WebSocket with unique viewer ID and private flag
+      sendChatMessage(newMessage, viewerId, isPrivateMessage);
     } else {
       // Fallback: local message only
       const mockMessage: ChatMessageWithProfile = {
@@ -271,13 +341,16 @@ export default function LiveViewerPage() {
         message: newMessage,
         created_at: new Date().toISOString(),
         is_synthetic: false,
+        is_private: isPrivateMessage,
+        sender_id: viewerId,
         status: 'active',
-        viewer_profiles: { first_name: 'Anonymous', last_name: 'Viewer' }
+        viewer_profiles: { first_name: viewerId, last_name: '' }
       };
       setChatMessages(prev => [...prev, mockMessage]);
     }
 
     setNewMessage('');
+    setIsPrivateMessage(false); // Reset to public after sending
   };
 
   if (loading) {
@@ -478,16 +551,29 @@ export default function LiveViewerPage() {
                         : 'Anonymous Viewer';
 
                       const messageTime = new Date(message.created_at).toLocaleTimeString();
+                      const isOwnMessage = message.sender_id === viewerId;
 
                       return (
-                        <div key={message.id}>
+                        <div
+                          key={message.id}
+                          className={`${message.is_private ? 'bg-purple-900/30 border border-purple-500/30 rounded-lg p-2' : ''}`}
+                        >
                           <div className="flex items-center gap-2 mb-1">
+                            {message.is_private && (
+                              <Lock className="w-3 h-3 text-purple-400" />
+                            )}
                             <span className="text-xs font-medium text-purple-200">
                               {displayName}
+                              {isOwnMessage && ' (You)'}
                             </span>
                             <span className="text-xs text-gray-500">
                               {messageTime}
                             </span>
+                            {message.is_private && (
+                              <span className="text-xs text-purple-400 font-medium">
+                                Private
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-white">{message.message}</div>
                         </div>
@@ -499,18 +585,56 @@ export default function LiveViewerPage() {
 
               {/* Chat Input */}
               <div className="p-4 border-t border-purple-500/20">
+                {/* Private Message Toggle */}
+                <div className="mb-2 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivateMessage(!isPrivateMessage)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isPrivateMessage
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-700/50 text-gray-400 hover:text-purple-300'
+                    }`}
+                  >
+                    {isPrivateMessage ? (
+                      <>
+                        <Lock className="w-3 h-3" />
+                        Private Message
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="w-3 h-3" />
+                        Public Message
+                      </>
+                    )}
+                  </button>
+                  {isPrivateMessage && (
+                    <span className="text-xs text-purple-300">
+                      Only visible to host
+                    </span>
+                  )}
+                </div>
+
                 <form onSubmit={sendMessage} className="flex gap-2">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 px-3 py-2 bg-slate-700/50 border border-purple-500/30 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-400"
+                    placeholder={isPrivateMessage ? "Send private message to host..." : "Type a message..."}
+                    className={`flex-1 px-3 py-2 bg-slate-700/50 border ${
+                      isPrivateMessage ? 'border-purple-400' : 'border-purple-500/30'
+                    } rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-400`}
                   />
                   <button
                     type="submit"
                     disabled={!newMessage.trim() || !connected}
-                    className={`p-2 ${connected ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-600'} disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors`}
+                    className={`p-2 ${
+                      isPrivateMessage
+                        ? 'bg-purple-700 hover:bg-purple-800'
+                        : connected
+                        ? 'bg-purple-600 hover:bg-purple-700'
+                        : 'bg-gray-600'
+                    } disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors`}
                     title={!connected ? 'Connection required to send messages' : ''}
                   >
                     <Send className="w-4 h-4" />

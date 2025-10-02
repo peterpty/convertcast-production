@@ -8,10 +8,13 @@ import { motion } from 'framer-motion';
 import { Play, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const router = useRouter();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   // Redirect if already logged in
   useEffect(() => {
@@ -28,6 +31,41 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('Sign in error:', err);
       setError(err.message || 'Failed to sign in with Google');
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setIsSigningIn(true);
+      setError(null);
+
+      if (mode === 'signin') {
+        await signInWithEmail(email, password);
+        // AuthContext will handle redirect via onAuthStateChange
+      } else {
+        await signUpWithEmail(email, password);
+        setError(null);
+        // Show success message for email verification
+        setError('Check your email to verify your account, then sign in.');
+        setMode('signin');
+        setPassword('');
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(err.message || `Failed to ${mode === 'signin' ? 'sign in' : 'sign up'}`);
       setIsSigningIn(false);
     }
   };
@@ -82,28 +120,129 @@ export default function LoginPage() {
             <div className="p-8 pb-6">
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">
-                  Welcome back
+                  {mode === 'signin' ? 'Welcome back' : 'Create account'}
                 </h1>
                 <p className="text-gray-400">
-                  Sign in to access your dashboard
+                  {mode === 'signin'
+                    ? 'Sign in to access your dashboard'
+                    : 'Get started with ConvertCast'}
                 </p>
               </div>
 
-              {/* Error Message */}
+              {/* Mode Toggle */}
+              <div className="flex gap-2 mb-6 bg-slate-700/30 p-1 rounded-lg">
+                <button
+                  onClick={() => { setMode('signin'); setError(null); }}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                    mode === 'signin'
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => { setMode('signup'); setError(null); }}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                    mode === 'signup'
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Sign Up
+                </button>
+              </div>
+
+              {/* Error/Success Message */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4"
+                  className={`mb-6 rounded-lg p-4 ${
+                    error.includes('Check your email')
+                      ? 'bg-green-500/10 border border-green-500/30'
+                      : 'bg-red-500/10 border border-red-500/30'
+                  }`}
                 >
-                  <p className="text-red-300 text-sm text-center">{error}</p>
+                  <p className={`text-sm text-center ${
+                    error.includes('Check your email') ? 'text-green-300' : 'text-red-300'
+                  }`}>
+                    {error}
+                  </p>
                 </motion.div>
               )}
+
+              {/* Email/Password Form */}
+              <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    disabled={isSigningIn}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    disabled={isSigningIn}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 transition-all"
+                    required
+                    minLength={6}
+                  />
+                  <p className="text-xs text-gray-400 mt-2">
+                    {mode === 'signup' && 'At least 6 characters'}
+                  </p>
+                </div>
+
+                <motion.button
+                  type="submit"
+                  disabled={isSigningIn}
+                  className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  {isSigningIn ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>{mode === 'signin' ? 'Signing in...' : 'Creating account...'}</span>
+                    </div>
+                  ) : (
+                    <span>{mode === 'signin' ? 'Sign In' : 'Create Account'}</span>
+                  )}
+                </motion.button>
+              </form>
+
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-700"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-slate-800/60 text-gray-400">Or continue with</span>
+                </div>
+              </div>
 
               {/* Google Sign In Button */}
               <motion.button
                 onClick={handleGoogleSignIn}
                 disabled={isSigningIn}
+                type="button"
                 className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl group"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
@@ -133,7 +272,7 @@ export default function LoginPage() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span>Continue with Google</span>
+                    <span>Google</span>
                   </>
                 )}
               </motion.button>
@@ -142,7 +281,7 @@ export default function LoginPage() {
             {/* Card Footer */}
             <div className="px-8 py-6 bg-slate-900/40 border-t border-slate-700/50">
               <p className="text-center text-gray-400 text-xs">
-                By signing in, you agree to our{' '}
+                By {mode === 'signin' ? 'signing in' : 'creating an account'}, you agree to our{' '}
                 <a href="#" className="text-purple-400 hover:text-purple-300 underline">
                   Terms
                 </a>

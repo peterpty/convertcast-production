@@ -342,7 +342,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                Live Stream Preview
+                Studio Preview
               </motion.h3>
 
               <motion.p
@@ -398,35 +398,8 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          {/* Status Indicators */}
-          <div className="flex items-center gap-3">
-            {/* Live Indicator */}
-            <motion.div
-              className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-md ${
-                isLive
-                  ? 'bg-red-600/90 text-white'
-                  : 'bg-slate-800/90 text-gray-300 border border-slate-600'
-              }`}
-              animate={isLive ? {
-                boxShadow: [
-                  '0 0 0 0 rgba(239, 68, 68, 0.7)',
-                  '0 0 0 10px rgba(239, 68, 68, 0)',
-                ]
-              } : {}}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <div className={`w-2 h-2 rounded-full ${
-                isLive ? 'bg-white animate-pulse' : 'bg-gray-500'
-              }`}></div>
-              {isLive ? 'LIVE' : 'PREVIEW'}
-            </motion.div>
-
-            {/* Viewer Count */}
-            <div className="px-3 py-1 rounded-full bg-slate-800/90 backdrop-blur-md text-white text-sm font-medium flex items-center gap-2">
-              <Users className="w-3 h-3" />
-              <span>{viewerCount.toLocaleString()}</span>
-            </div>
-          </div>
+          {/* Empty spacer - controls moved to header */}
+          <div></div>
 
           {/* Control Buttons */}
           <div className="flex items-center gap-2">

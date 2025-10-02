@@ -556,7 +556,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
                   <div className="w-3 h-3 bg-white rounded-full"></div>
                 </div>
                 <div>
-                  <h2 className="text-white font-bold text-xl">Live Preview</h2>
+                  <h2 className="text-white font-bold text-xl">Studio Preview</h2>
                   <div className="flex items-center gap-3 mt-1">
                     <div className={`flex items-center gap-2 text-sm font-semibold ${
                       streamHealth?.status === 'offline' ? 'text-gray-400' : 'text-green-400'
@@ -567,7 +567,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
                       {streamHealth?.status === 'offline' ? 'OFFLINE' : 'LIVE'}
                     </div>
                     <div className="text-sm text-white font-semibold">
-                      {viewerCount.toLocaleString()} viewers
+                      {viewerCount} viewers
                     </div>
                     {/* WebSocket Status */}
                     <div className="flex items-center gap-2">

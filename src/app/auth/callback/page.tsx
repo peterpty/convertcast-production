@@ -62,36 +62,87 @@ export default function AuthCallback() {
         // If we have a hash with tokens (implicit flow - fallback)
         if (accessToken) {
           addLog('⚠️ WARNING: Using implicit flow (hash-based tokens)');
-          addLog('⚠️ This means PKCE flow is NOT working properly');
+          addLog('⚠️ This means PKCE flow is NOT enabled in Supabase project');
+          addLog('💡 To fix: Enable PKCE in Supabase Dashboard > Authentication > URL Configuration');
           addLog('🔧 Attempting to handle session from hash...');
 
-          // Let Supabase's detectSessionInUrl handle it
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            // Extract all token parameters from hash
+            const expiresIn = hashParams.get('expires_in');
+            const expiresAt = hashParams.get('expires_at');
+            const tokenType = hashParams.get('token_type');
 
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            addLog(`🔑 Token type: ${tokenType || 'bearer'}`);
+            addLog(`⏰ Expires in: ${expiresIn || 'unknown'} seconds`);
 
-          if (sessionError) {
-            addLog(`❌ Session error: ${sessionError.message}`);
-            setError('Failed to establish session');
-            setTimeout(() => router.push('/auth/login'), 2000);
-            return;
+            // Method 1: Try to manually set session with tokens
+            if (accessToken && refreshToken) {
+              addLog('📝 Attempting manual session establishment with tokens...');
+
+              const { data: sessionData, error: setSessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (setSessionError) {
+                addLog(`❌ Manual setSession error: ${setSessionError.message}`);
+              } else if (sessionData.session) {
+                addLog(`✅ Session established manually via setSession!`);
+                addLog(`👤 User: ${sessionData.session.user.email}`);
+                addLog(`⏰ Expires: ${new Date(sessionData.session.expires_at! * 1000).toLocaleString()}`);
+                addLog(`🎯 Redirecting to dashboard...`);
+
+                // Wait for auth context to update
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                router.push('/dashboard');
+                return;
+              }
+            }
+
+            // Method 2: Poll for automatic session detection
+            addLog('🔍 Manual session failed, polling for automatic detection...');
+            let implicitAttempts = 0;
+            const maxImplicitAttempts = 20; // 10 seconds total
+
+            while (implicitAttempts < maxImplicitAttempts) {
+              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+              if (sessionError) {
+                addLog(`❌ Session error (attempt ${implicitAttempts + 1}): ${sessionError.message}`);
+                implicitAttempts++;
+                await new Promise(resolve => setTimeout(resolve, 500));
+                continue;
+              }
+
+              if (session) {
+                addLog(`✅ Session established via automatic detection (attempt ${implicitAttempts + 1})`);
+                addLog(`👤 User: ${session.user.email}`);
+                addLog(`⏰ Expires: ${new Date(session.expires_at! * 1000).toLocaleString()}`);
+                addLog(`🎯 Redirecting to dashboard...`);
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                router.push('/dashboard');
+                return;
+              }
+
+              addLog(`⏳ Waiting for session... (attempt ${implicitAttempts + 1}/${maxImplicitAttempts})`);
+              implicitAttempts++;
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            addLog(`❌ Session not established after ${maxImplicitAttempts} attempts`);
+            addLog('💡 Tokens present but session not created');
+          } catch (err: any) {
+            addLog(`❌ Error handling implicit flow: ${err.message}`);
           }
 
-          if (session) {
-            addLog(`✅ Session established via implicit flow`);
-            addLog(`👤 User: ${session.user.email}`);
-            addLog(`🎯 Redirecting to dashboard...`);
-
-            // Wait for auth context to update
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            router.push('/dashboard');
-            return;
-          } else {
-            addLog('❌ No session after implicit flow handling');
-            setError('Session not established');
-            setTimeout(() => router.push('/auth/login'), 2000);
-            return;
-          }
+          addLog('🔧 SOLUTION: Enable PKCE flow in Supabase Dashboard');
+          addLog('📋 Steps: Dashboard > Project Settings > Authentication > URL Configuration');
+          addLog('✅ Check "Enable PKCE flow" checkbox');
+          setError('Authentication requires configuration update. See debug info.');
+          setShowDebug(true);
+          setTimeout(() => router.push('/auth/login'), 8000);
+          return;
         }
 
         // If we have a code (PKCE flow - preferred)

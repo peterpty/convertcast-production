@@ -77,11 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const redirectUrl = `${window.location.origin}/auth/callback`;
       console.log('🔐 AuthContext: Initiating Google OAuth...');
       console.log('🔗 AuthContext: Redirect URL:', redirectUrl);
+      console.log('🔒 AuthContext: Flow Type: PKCE (configured in client)');
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
+          skipBrowserRedirect: false,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -96,7 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ AuthContext: OAuth initiated successfully');
       if (data.url) {
-        console.log('🔗 AuthContext: Redirecting to:', data.url.substring(0, 50) + '...');
+        console.log('🔗 AuthContext: Redirecting to:', data.url.substring(0, 100) + '...');
+        // Log if the URL contains any flow indicators
+        if (data.url.includes('flow_type')) {
+          console.log('📋 AuthContext: Flow type parameter found in URL');
+        }
       }
     } catch (error) {
       console.error('❌ AuthContext: Sign in error:', error);

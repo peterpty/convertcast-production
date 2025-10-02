@@ -287,15 +287,17 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
               </p>
             </video>
 
-            {/* Stream Debug Info */}
-            <div className="absolute top-3 left-3 bg-black/80 text-white text-xs p-3 rounded-lg">
-              <div className="font-medium mb-1">Stream Debug Info:</div>
-              <div>📺 Playback ID: <span className="text-blue-300">{muxPlaybackId}</span></div>
-              <div>🔗 Stream URL: <span className="text-green-300 break-all">https://stream.mux.com/{muxPlaybackId}.m3u8</span></div>
-              <div>📊 Status: <span className={videoReady ? 'text-green-300' : 'text-yellow-300'}>{videoReady ? '✅ Ready' : '⏳ Loading'}</span></div>
-              <div>🔴 Live: <span className={isLive ? 'text-red-300' : 'text-gray-300'}>{isLive ? 'YES' : 'NO'}</span></div>
-              {videoError && <div className="text-red-300 mt-1">❌ {videoError}</div>}
-            </div>
+            {/* Stream Debug Info - Development Only */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="absolute top-3 left-3 bg-black/80 text-white text-xs p-3 rounded-lg">
+                <div className="font-medium mb-1">Stream Debug Info:</div>
+                <div>📺 Playback ID: <span className="text-blue-300">{muxPlaybackId}</span></div>
+                <div>🔗 Stream URL: <span className="text-green-300 break-all">https://stream.mux.com/{muxPlaybackId}.m3u8</span></div>
+                <div>📊 Status: <span className={videoReady ? 'text-green-300' : 'text-yellow-300'}>{videoReady ? '✅ Ready' : '⏳ Loading'}</span></div>
+                <div>🔴 Live: <span className={isLive ? 'text-red-300' : 'text-gray-300'}>{isLive ? 'YES' : 'NO'}</span></div>
+                {videoError && <div className="text-red-300 mt-1">❌ {videoError}</div>}
+              </div>
+            )}
 
             {/* Stream Status Indicator */}
             <div className="absolute bottom-3 right-3 bg-black/80 text-white text-xs px-3 py-2 rounded-lg">

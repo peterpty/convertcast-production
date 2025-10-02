@@ -13,6 +13,8 @@ export async function middleware(req: NextRequest) {
 
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
   const isDashboardPage = req.nextUrl.pathname.startsWith('/dashboard');
+  const isPasswordResetPage = req.nextUrl.pathname.startsWith('/auth/reset-password') ||
+                               req.nextUrl.pathname.startsWith('/auth/update-password');
 
   // If trying to access dashboard without auth, redirect to login
   if (isDashboardPage && !session) {
@@ -20,7 +22,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // If trying to access auth pages while already authenticated, redirect to dashboard
-  if (isAuthPage && session && !req.nextUrl.pathname.includes('/callback')) {
+  // EXCEPT for callback, reset-password, and update-password pages
+  if (isAuthPage && session && !req.nextUrl.pathname.includes('/callback') && !isPasswordResetPage) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 

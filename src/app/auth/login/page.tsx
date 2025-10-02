@@ -205,9 +205,19 @@ export default function LoginPage() {
                     required
                     minLength={6}
                   />
-                  <p className="text-xs text-gray-400 mt-2">
-                    {mode === 'signup' && 'At least 6 characters'}
-                  </p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-gray-400">
+                      {mode === 'signup' && 'At least 6 characters'}
+                    </p>
+                    {mode === 'signin' && (
+                      <Link
+                        href="/auth/reset-password"
+                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                      >
+                        Forgot password?
+                      </Link>
+                    )}
+                  </div>
                 </div>
 
                 <motion.button

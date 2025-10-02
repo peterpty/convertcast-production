@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import { AlertCircle, Check, Mail, Lock, User } from 'lucide-react';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { user, loading, signUpWithEmail } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,11 +21,20 @@ export default function SignUpPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     // Basic validation
     if (formData.password !== formData.confirmPassword) {
@@ -32,21 +43,38 @@ export default function SignUpPage() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
       setIsLoading(false);
       return;
     }
 
-    // Simulate signup process
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    if (!formData.name.trim()) {
+      setError('Please enter your name');
+      setIsLoading(false);
+      return;
+    }
 
-      // In a real app, you would handle authentication here
-      // For demo purposes, we'll redirect to dashboard
-      router.push('/dashboard');
-    } catch (err) {
-      setError('Failed to create account. Please try again.');
+    try {
+      await signUpWithEmail(formData.email, formData.password);
+      setSuccess('Account created! Please check your email to verify your account, then sign in.');
+      setError('');
+
+      // Clear form
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +88,17 @@ export default function SignUpPage() {
       [field]: e.target.value
     }));
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold text-white">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -98,6 +137,13 @@ export default function SignUpPage() {
                 <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                   <AlertCircle className="w-4 h-4 text-red-400" />
                   <span className="text-sm text-red-400">{error}</span>
+                </div>
+              )}
+
+              {success && (
+                <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <Check className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400">{success}</span>
                 </div>
               )}
 
@@ -204,7 +250,7 @@ export default function SignUpPage() {
               <div className="text-center">
                 <p className="text-sm text-slate-400">
                   Already have an account?{' '}
-                  <Link href="/auth/signin" className="text-purple-400 hover:text-purple-300">
+                  <Link href="/auth/login" className="text-purple-400 hover:text-purple-300">
                     Sign in
                   </Link>
                 </p>

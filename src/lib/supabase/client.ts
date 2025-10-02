@@ -53,18 +53,21 @@ export const supabase = isMockMode
     });
 
 // Admin client for server-side operations
+// Only create if service key is available (server-side only)
 export const supabaseAdmin = isMockMode
   ? createMockClient()
-  : createClient<Database>(
-      supabaseUrl,
-      supabaseServiceKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
+  : (supabaseServiceKey && typeof window === 'undefined')
+    ? createClient<Database>(
+        supabaseUrl,
+        supabaseServiceKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          }
         }
-      }
-    );
+      )
+    : createMockClient(); // Use mock on client side
 
 // Log the client type for debugging
 if (typeof window !== 'undefined') {

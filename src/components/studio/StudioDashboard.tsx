@@ -416,11 +416,8 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
 
       console.log('🎯 Studio broadcasting overlay:', overlayType, overlayData);
       broadcastOverlay(overlayType, overlayData);
-
-      // Show success feedback
-      alert(`✅ Overlay broadcast: ${overlayType}\nCheck viewer page debug panel!`);
     } else {
-      alert('❌ WebSocket not connected - Cannot broadcast overlay');
+      console.warn('❌ WebSocket not connected - Cannot broadcast overlay');
     }
   };
 

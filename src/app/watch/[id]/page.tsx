@@ -190,27 +190,27 @@ export default function LiveViewerPage() {
         let streamError = muxResult.error;
 
         if (!stream) {
-          // Fallback: Create demo data for valid-looking Mux IDs
+          // Fallback: Create minimal stream data if database lookup fails
           if (streamId.length > 20 && (streamId.includes('_') || streamId.length > 30)) {
-            console.log('🎯 Viewer: Creating fallback stream data for Mux ID:', streamId);
+            console.log('⚠️ Viewer: Database lookup failed, creating minimal fallback data');
             stream = {
               id: streamId,
               mux_playback_id: streamId,
               status: 'active',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-              event_id: 'fallback-event-id',
+              event_id: 'unknown',
               mux_stream_id: null,
-              viewer_count: 1847,
-              peak_viewers: 1847,
+              viewer_count: 0,
+              peak_viewers: 0,
               events: {
-                id: 'fallback-event-id',
-                title: 'Live: How to 10x Your Webinar Conversions',
-                description: 'Live streaming session - testing viewer experience',
+                id: 'unknown',
+                title: 'Live Stream',
+                description: '',
                 scheduled_start: new Date().toISOString(),
                 scheduled_end: new Date(Date.now() + 3600000).toISOString(),
                 status: 'live',
-                user_id: 'demo-user'
+                user_id: 'unknown'
               }
             } as StreamWithEvent;
             streamError = null;
@@ -224,9 +224,9 @@ export default function LiveViewerPage() {
         }
 
         setStreamData(stream as StreamWithEvent);
-        setViewerCount(stream.peak_viewers || 1847);
+        setViewerCount(stream.viewer_count || 0);
         setLoading(false);
-        console.log('✅ Viewer: Using playback ID for WebSocket room:', streamId);
+        console.log('✅ Viewer: Loaded stream data with', stream.viewer_count || 0, 'viewers');
       } catch (err) {
         console.error('Error loading stream:', err);
         setError('Failed to load stream');
@@ -523,15 +523,17 @@ export default function LiveViewerPage() {
       </div>
       </div>
 
-      {/* WebSocket Debug Panel */}
-      <WebSocketDebugPanel
-        connected={connected}
-        connectionStatus={connectionStatus}
-        error={websocketError}
-        streamId={streamId}
-        websocketUrl={websocketUrl}
-        eventLog={eventLog}
-      />
+      {/* WebSocket Debug Panel - Development Only */}
+      {process.env.NODE_ENV === 'development' && (
+        <WebSocketDebugPanel
+          connected={connected}
+          connectionStatus={connectionStatus}
+          error={websocketError}
+          streamId={streamId}
+          websocketUrl={websocketUrl}
+          eventLog={eventLog}
+        />
+      )}
     </WebSocketErrorBoundary>
   );
 }

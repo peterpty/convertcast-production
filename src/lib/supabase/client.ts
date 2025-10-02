@@ -1,16 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
-// Default values for development/mock mode
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vY2stcHJvamVjdCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjQ2NjE2MDAwLCJleHAiOjE5NjIxOTIwMDB9.mock-key-for-development';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vY2stcHJvamVjdCIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE2NDY2MTYwMDAsImV4cCI6MTk2MjE5MjAwMH0.mock-service-role-key';
+// Get environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-// Mock mode detection
-const isMockMode = process.env.MOCK_DATABASE === 'true' || process.env.NODE_ENV === 'development';
+// Explicit mock mode detection - only use mock if explicitly enabled OR no URL provided
+const isMockMode = process.env.MOCK_DATABASE === 'true' ||
+                  !supabaseUrl ||
+                  supabaseUrl.includes('mock');
+
+console.log('🔧 Supabase Client Config:', {
+  hasUrl: !!supabaseUrl,
+  hasAnonKey: !!supabaseAnonKey,
+  isMockMode,
+  url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'none'
+});
 
 // Create mock client that doesn't actually connect to Supabase
 function createMockClient() {
+  console.warn('⚠️ Using MOCK Supabase client - auth will not work!');
   return {
     from: (table: string) => ({
       select: () => ({ data: [], error: null }),
@@ -20,19 +30,30 @@ function createMockClient() {
       upsert: () => ({ data: null, error: null })
     }),
     auth: {
-      getUser: () => ({ data: { user: null }, error: null }),
-      signIn: () => ({ data: null, error: null }),
-      signOut: () => ({ data: null, error: null })
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signInWithOAuth: () => Promise.resolve({ data: { url: null, provider: 'google' }, error: new Error('Mock mode: OAuth not available') }),
+      signOut: () => Promise.resolve({ error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
     }
   } as any;
 }
 
-export const supabase = isMockMode && (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('mock'))
+// Create real Supabase client with proper cookie options for production
+export const supabase = isMockMode
   ? createMockClient()
-  : createClient<Database>(supabaseUrl, supabaseAnonKey);
+  : createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        flowType: 'pkce',
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      }
+    });
 
 // Admin client for server-side operations
-export const supabaseAdmin = isMockMode && (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('mock'))
+export const supabaseAdmin = isMockMode
   ? createMockClient()
   : createClient<Database>(
       supabaseUrl,
@@ -44,3 +65,8 @@ export const supabaseAdmin = isMockMode && (!process.env.NEXT_PUBLIC_SUPABASE_UR
         }
       }
     );
+
+// Log the client type for debugging
+if (typeof window !== 'undefined') {
+  console.log('✅ Supabase client initialized:', isMockMode ? 'MOCK MODE' : 'PRODUCTION MODE');
+}

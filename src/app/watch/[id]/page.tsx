@@ -57,14 +57,34 @@ export default function LiveViewerPage() {
   const [userReacted, setUserReacted] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
-  const [actualStreamId, setActualStreamId] = useState<string | null>(null);
 
   // Transform WebSocket overlay data to OverlayState format
   const overlayState = overlayData ? {
-    lowerThirds: { visible: false, text: '', subtext: '', position: 'bottom-left' as const, style: 'branded' as const },
-    countdown: { visible: false, targetTime: '', message: '', style: 'digital' as const },
-    registrationCTA: { visible: false, headline: '', buttonText: '', urgency: false, position: 'bottom-center' as const },
-    socialProof: { visible: false, type: 'viewer-count' as const, position: 'top-right' as const },
+    lowerThirds: overlayData.overlayType === 'lowerThirds' ? {
+      visible: overlayData.overlayData?.visible !== false,
+      text: overlayData.overlayData?.text || '',
+      subtext: overlayData.overlayData?.subtext || '',
+      position: overlayData.overlayData?.position || 'bottom-left' as const,
+      style: overlayData.overlayData?.style || 'branded' as const
+    } : { visible: false, text: '', subtext: '', position: 'bottom-left' as const, style: 'branded' as const },
+    countdown: overlayData.overlayType === 'countdown' ? {
+      visible: overlayData.overlayData?.visible !== false,
+      targetTime: overlayData.overlayData?.targetTime || '',
+      message: overlayData.overlayData?.message || '',
+      style: overlayData.overlayData?.style || 'digital' as const
+    } : { visible: false, targetTime: '', message: '', style: 'digital' as const },
+    registrationCTA: overlayData.overlayType === 'registrationCTA' ? {
+      visible: overlayData.overlayData?.visible !== false,
+      headline: overlayData.overlayData?.headline || '',
+      buttonText: overlayData.overlayData?.buttonText || '',
+      urgency: overlayData.overlayData?.urgency || false,
+      position: overlayData.overlayData?.position || 'bottom-center' as const
+    } : { visible: false, headline: '', buttonText: '', urgency: false, position: 'bottom-center' as const },
+    socialProof: overlayData.overlayType === 'socialProof' ? {
+      visible: overlayData.overlayData?.visible !== false,
+      type: overlayData.overlayData?.type || 'viewer-count' as const,
+      position: overlayData.overlayData?.position || 'top-right' as const
+    } : { visible: false, type: 'viewer-count' as const, position: 'top-right' as const },
     engageMax: {
       currentPoll: overlayData.overlayType === 'poll' ? {
         id: overlayData.overlayData?.id || null,
@@ -90,7 +110,10 @@ export default function LiveViewerPage() {
         trigger: 'manual' as const
       }
     },
-    celebrations: { enabled: false }
+    celebrations: overlayData.overlayType === 'celebrations' ? {
+      enabled: overlayData.overlayData?.enabled !== false,
+      currentCelebration: overlayData.overlayData?.currentCelebration
+    } : { enabled: false }
   } : null;
 
   // WebSocket connection for real-time features
@@ -104,7 +127,7 @@ export default function LiveViewerPage() {
     eventLog,
     websocketUrl
   } = useWebSocket({
-    streamId: actualStreamId || streamId, // Use database ID once loaded
+    streamId: streamId, // Use playback ID directly for consistent room matching
     userType: 'viewer',
     onViewerCountUpdate: (count: number) => setViewerCount(count),
     onOverlayUpdate: (data: any) => {
@@ -201,10 +224,9 @@ export default function LiveViewerPage() {
         }
 
         setStreamData(stream as StreamWithEvent);
-        setActualStreamId(stream.id); // Set actual database stream ID for WebSocket room
         setViewerCount(stream.peak_viewers || 1847);
         setLoading(false);
-        console.log('✅ Viewer: Using database stream ID for WebSocket:', stream.id);
+        console.log('✅ Viewer: Using playback ID for WebSocket room:', streamId);
       } catch (err) {
         console.error('Error loading stream:', err);
         setError('Failed to load stream');
@@ -382,7 +404,7 @@ export default function LiveViewerPage() {
                     <OverlayRenderer
                       overlayState={overlayState}
                       viewerCount={viewerCount}
-                      streamId={actualStreamId || streamId}
+                      streamId={streamId}
                       connected={connected}
                     />
                   </div>

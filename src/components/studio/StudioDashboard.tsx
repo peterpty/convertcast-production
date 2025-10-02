@@ -391,7 +391,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     eventLog,
     websocketUrl
   } = useWebSocket({
-    streamId: stream.id,
+    streamId: muxStream?.playback_id || stream.mux_playback_id || stream.id,
     userType: 'streamer',
     onViewerCountUpdate: (count: number) => setViewerCount(count),
     onOverlayUpdate: (data: any) => {

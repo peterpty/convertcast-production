@@ -15,8 +15,29 @@ console.log('🔧 Supabase Client Config:', {
   hasUrl: !!supabaseUrl,
   hasAnonKey: !!supabaseAnonKey,
   isMockMode,
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'none'
+  url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'none',
+  reason: !supabaseUrl
+    ? '❌ NEXT_PUBLIC_SUPABASE_URL is missing'
+    : process.env.MOCK_DATABASE === 'true'
+    ? '⚙️ MOCK_DATABASE is set to true'
+    : '✅ Environment configured correctly'
 });
+
+// Clear any stale sessions if in mock mode to prevent redirect loops
+if (isMockMode && typeof window !== 'undefined') {
+  console.warn('⚠️ Mock mode detected - clearing any stale sessions');
+  try {
+    window.localStorage.removeItem('supabase.auth.token');
+    // Clear the Supabase-specific localStorage keys
+    Object.keys(window.localStorage).forEach(key => {
+      if (key.startsWith('sb-') && key.includes('-auth-token')) {
+        window.localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {
+    console.error('Failed to clear localStorage:', e);
+  }
+}
 
 // Create mock client that doesn't actually connect to Supabase
 function createMockClient() {

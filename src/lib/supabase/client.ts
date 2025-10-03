@@ -1,135 +1,81 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
-// Get environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// Get environment variables - REQUIRED for production
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Explicit mock mode detection - only use mock if explicitly enabled OR no URL provided
-const isMockMode = process.env.MOCK_DATABASE === 'true' ||
-                  !supabaseUrl ||
-                  supabaseUrl.includes('mock');
+// Validate required environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  const errorMessage = `
+╔════════════════════════════════════════════════════════════════╗
+║  CRITICAL ERROR: Missing Supabase Configuration                ║
+╠════════════════════════════════════════════════════════════════╣
+║                                                                ║
+║  Required environment variables are not set:                   ║
+║                                                                ║
+${!supabaseUrl ? '║  ❌ NEXT_PUBLIC_SUPABASE_URL                                   ║\n' : ''}${!supabaseAnonKey ? '║  ❌ NEXT_PUBLIC_SUPABASE_ANON_KEY                              ║\n' : ''}║                                                                ║
+║  This application requires Supabase to function.               ║
+║                                                                ║
+║  VERCEL USERS:                                                 ║
+║  1. Go to: Settings → Environment Variables                    ║
+║  2. Add the missing variables                                  ║
+║  3. Redeploy your application                                  ║
+║                                                                ║
+║  LOCAL DEVELOPMENT:                                            ║
+║  1. Copy .env.example to .env.local                            ║
+║  2. Add your Supabase credentials                              ║
+║  3. Restart your dev server                                    ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+  `;
 
-console.log('🔧 Supabase Client Config:', {
-  hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
-  isMockMode,
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'none',
-  reason: !supabaseUrl
-    ? '❌ NEXT_PUBLIC_SUPABASE_URL is missing'
-    : process.env.MOCK_DATABASE === 'true'
-    ? '⚙️ MOCK_DATABASE is set to true'
-    : '✅ Environment configured correctly'
+  console.error(errorMessage);
+
+  if (typeof window !== 'undefined') {
+    // Show error in browser console with styling
+    console.error('%c⚠️ CONFIGURATION ERROR', 'color: red; font-size: 24px; font-weight: bold;');
+    console.error('%cMissing Supabase environment variables. Check console for details.', 'color: red; font-size: 16px;');
+  }
+
+  throw new Error('Missing required Supabase environment variables. Check console for details.');
+}
+
+console.log('✅ Supabase Configuration:', {
+  url: `${supabaseUrl.substring(0, 30)}...`,
+  hasAnonKey: true,
+  hasServiceKey: !!supabaseServiceKey,
+  mode: 'PRODUCTION'
 });
 
-// Clear any stale sessions if in mock mode to prevent redirect loops
-if (isMockMode && typeof window !== 'undefined') {
-  console.warn('⚠️ Mock mode detected - clearing any stale sessions');
-  try {
-    window.localStorage.removeItem('supabase.auth.token');
-    // Clear the Supabase-specific localStorage keys
-    Object.keys(window.localStorage).forEach(key => {
-      if (key.startsWith('sb-') && key.includes('-auth-token')) {
-        window.localStorage.removeItem(key);
-      }
-    });
-  } catch (e) {
-    console.error('Failed to clear localStorage:', e);
+// Create Supabase client with production configuration
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'pkce',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   }
-}
-
-// Create mock client that doesn't actually connect to Supabase
-function createMockClient() {
-  console.warn('⚠️ Using MOCK Supabase client - auth will not work!');
-  return {
-    from: (table: string) => ({
-      select: () => ({ data: [], error: null }),
-      insert: () => ({ data: null, error: null }),
-      update: () => ({ data: null, error: null }),
-      delete: () => ({ data: null, error: null }),
-      upsert: () => ({ data: null, error: null })
-    }),
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      signInWithOAuth: () => Promise.resolve({
-        data: { url: null, provider: 'google' },
-        error: {
-          message: 'Authentication is disabled. Please contact support to enable authentication.',
-          status: 503,
-          name: 'MockModeError'
-        }
-      }),
-      signInWithPassword: () => Promise.resolve({
-        data: { user: null, session: null },
-        error: {
-          message: 'Authentication is disabled. Please contact support to enable authentication.',
-          status: 503,
-          name: 'MockModeError'
-        }
-      }),
-      signUp: () => Promise.resolve({
-        data: { user: null, session: null },
-        error: {
-          message: 'Authentication is disabled. Please contact support to enable authentication.',
-          status: 503,
-          name: 'MockModeError'
-        }
-      }),
-      resetPasswordForEmail: () => Promise.resolve({
-        data: {},
-        error: {
-          message: 'Authentication is disabled. Please contact support to enable authentication.',
-          status: 503,
-          name: 'MockModeError'
-        }
-      }),
-      updateUser: () => Promise.resolve({
-        data: { user: null },
-        error: {
-          message: 'Authentication is disabled. Please contact support to enable authentication.',
-          status: 503,
-          name: 'MockModeError'
-        }
-      }),
-      signOut: () => Promise.resolve({ error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
-    }
-  } as any;
-}
-
-// Create real Supabase client with proper cookie options for production
-export const supabase = isMockMode
-  ? createMockClient()
-  : createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        flowType: 'pkce',
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      }
-    });
+});
 
 // Admin client for server-side operations
 // Only create if service key is available (server-side only)
-export const supabaseAdmin = isMockMode
-  ? createMockClient()
-  : (supabaseServiceKey && typeof window === 'undefined')
-    ? createClient<Database>(
-        supabaseUrl,
-        supabaseServiceKey,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          }
+export const supabaseAdmin = (supabaseServiceKey && typeof window === 'undefined')
+  ? createClient<Database>(
+      supabaseUrl,
+      supabaseServiceKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
         }
-      )
-    : createMockClient(); // Use mock on client side
+      }
+    )
+  : supabase; // Use regular client on client-side
 
-// Log the client type for debugging
+// Log successful initialization
 if (typeof window !== 'undefined') {
-  console.log('✅ Supabase client initialized:', isMockMode ? 'MOCK MODE' : 'PRODUCTION MODE');
+  console.log('✅ Supabase client initialized successfully');
 }

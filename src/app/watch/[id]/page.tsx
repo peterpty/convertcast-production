@@ -150,6 +150,7 @@ export default function LiveViewerPage() {
   } = useWebSocket({
     streamId: streamId, // Use playback ID directly for consistent room matching
     userType: 'viewer',
+    userId: viewerId, // CRITICAL: Must match viewerId to prevent duplication
     onViewerCountUpdate: (count: number) => setViewerCount(count),
     onOverlayUpdate: (data: any) => {
       console.log('📡 Overlay received in viewer:', data);
@@ -702,11 +703,11 @@ export default function LiveViewerPage() {
                                 handleReaction(type);
                                 setShowEmojiPicker(false);
                               }}
-                              whileTap={{ scale: 1.3 }}
-                              whileHover={{ scale: 1.2 }}
-                              className="w-12 h-12 rounded-xl bg-slate-700/50 hover:bg-purple-600/30 flex items-center justify-center transition-all"
+                              whileTap={{ scale: 1.4 }}
+                              whileHover={{ scale: 1.15 }}
+                              className="w-12 h-12 flex items-center justify-center hover:bg-purple-600/20 rounded-lg transition-colors"
                             >
-                              <span className="text-2xl">{emoji}</span>
+                              <span className="text-3xl leading-none filter drop-shadow-sm">{emoji}</span>
                             </motion.button>
                           ))}
                         </div>

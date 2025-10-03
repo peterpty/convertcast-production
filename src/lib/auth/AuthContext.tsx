@@ -65,10 +65,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Redirect to dashboard after sign in
+      // Redirect to dashboard after sign in (but only from auth pages)
       if (event === 'SIGNED_IN' && session) {
-        console.log('🎯 AuthContext: Redirecting to dashboard...');
-        router.push('/dashboard');
+        const currentPath = window.location.pathname;
+        const isOnAuthPage = currentPath.startsWith('/auth');
+        const isOnDashboard = currentPath.startsWith('/dashboard');
+        const isOnWatchPage = currentPath.startsWith('/watch');
+
+        // Only redirect if on auth page (not already on dashboard or watch page)
+        if (isOnAuthPage) {
+          console.log('🎯 AuthContext: Redirecting to dashboard from auth page...');
+          router.push('/dashboard');
+        } else {
+          console.log('🎯 AuthContext: SIGNED_IN event received, but staying on current page:', currentPath);
+        }
       }
 
       // Redirect to login after sign out

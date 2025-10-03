@@ -184,33 +184,48 @@ export default function LiveViewerPage() {
       setChatMessages(prev => [...prev, chatMessage]);
     },
     onViewerReaction: (reaction: any) => {
-      // Map reaction types to emojis
+      console.log('📡 Received WebSocket reaction:', reaction);
+
+      // CRITICAL: Don't add floating reaction if it's from this viewer (avoid duplication)
+      // Local reactions are already added immediately in handleReaction()
+      if (reaction.userId === viewerId || reaction.userId?.startsWith('local-')) {
+        console.log('⏭️ Skipping own reaction to avoid duplication');
+        return;
+      }
+
+      // Unified emoji map (matches handleReaction exactly)
       const emojiMap: { [key: string]: string } = {
         heart: '❤️',
+        laugh: '😂',
+        wow: '😮',
+        sad: '😢',
+        clap: '👏',
+        fire: '🔥',
+        hundred: '💯',
+        rocket: '🚀',
         thumbs: '👍',
         star: '⭐',
-        fire: '🔥',
-        clap: '👏',
         love: '😍',
-        wow: '🤯',
-        rocket: '🚀',
-        hundred: '💯'
+        cool: '😎',
+        party: '🎉',
+        mind: '🤯'
       };
 
       const emoji = emojiMap[reaction.reactionType] || '❤️';
 
-      // Add floating reaction with random position
+      // Add floating reaction from other viewers
       const newReaction = {
-        id: `${Date.now()}-${Math.random()}`,
+        id: `remote-${Date.now()}-${Math.random()}`,
         emoji,
-        x: Math.random() * 80 + 10, // Keep reactions within 10-90% range
+        x: Math.random() * 80 + 10,
         y: Math.random() * 80 + 10,
         timestamp: Date.now()
       };
 
-      setFloatingReactions(prev => [...prev, newReaction].slice(-20)); // Keep last 20
+      console.log('✨ Adding remote reaction:', newReaction);
+      setFloatingReactions(prev => [...prev, newReaction].slice(-20));
 
-      // Update reaction counts for the bar
+      // Update reaction counts for analytics
       setReactions(prev => ({
         ...prev,
         [reaction.reactionType]: (prev[reaction.reactionType] || 0) + 1

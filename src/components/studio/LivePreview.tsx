@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Users, Maximize, Settings, Eye, EyeOff } from 'lucide-react';
 import Hls from 'hls.js';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
+import '@/styles/instagram-overlays.css';
 
 interface OverlayState {
   lowerThirds: {
@@ -58,9 +59,10 @@ interface LivePreviewProps {
   viewerCount: number;
   muxPlaybackId?: string;
   isLive?: boolean;
+  reactions?: Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>;
 }
 
-export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId, isLive = false }: LivePreviewProps) {
+export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId, isLive = false, reactions = [] }: LivePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [scale, setScale] = useState(1);
@@ -386,6 +388,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
                 viewerCount={viewerCount}
                 streamId={streamId}
                 connected={true}
+                reactions={reactions}
               />
             </motion.div>
           )}

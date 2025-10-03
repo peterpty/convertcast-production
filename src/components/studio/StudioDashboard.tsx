@@ -142,6 +142,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     server_url: string;
     stream_key: string;
   } | null>(null);
+  const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
 
   // Initialize Mux stream and get real RTMP credentials with enhanced error handling
   useEffect(() => {
@@ -379,6 +380,16 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     };
   }, [stream.id, stream.mux_stream_id, stream.events.title]);
 
+  // Clean up old floating reactions after 10 seconds
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setFloatingReactions(prev => prev.filter(reaction => now - reaction.timestamp < 10000));
+    }, 1000);
+
+    return () => clearInterval(cleanup);
+  }, []);
+
   // Smart WebSocket connection with automatic fallback
   const {
     socket,
@@ -397,6 +408,41 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     onOverlayUpdate: (data: any) => {
       // Handle overlay updates from other streamers (if any)
       setOverlayState(prev => ({ ...prev, ...data.overlayData }));
+    },
+    onViewerReaction: (reaction: any) => {
+      console.log('📡 Studio received viewer reaction:', reaction);
+
+      // Unified emoji map (matches viewer side)
+      const emojiMap: { [key: string]: string } = {
+        heart: '❤️',
+        laugh: '😂',
+        wow: '😮',
+        sad: '😢',
+        clap: '👏',
+        fire: '🔥',
+        hundred: '💯',
+        rocket: '🚀',
+        thumbs: '👍',
+        star: '⭐',
+        love: '😍',
+        cool: '😎',
+        party: '🎉',
+        mind: '🤯'
+      };
+
+      const emoji = emojiMap[reaction.reactionType] || '❤️';
+
+      // Add floating reaction to studio preview
+      const newReaction = {
+        id: `studio-${Date.now()}-${Math.random()}`,
+        emoji,
+        x: Math.random() * 80 + 10,
+        y: Math.random() * 80 + 10,
+        timestamp: Date.now()
+      };
+
+      console.log('✨ Adding reaction to studio preview:', newReaction);
+      setFloatingReactions(prev => [...prev, newReaction].slice(-20));
     },
     onError: (error: string) => {
       console.error('Studio WebSocket error:', error);
@@ -612,6 +658,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
               viewerCount={viewerCount}
               muxPlaybackId={muxStream?.playback_id || undefined}
               isLive={streamHealth?.status === 'active' && stream.status === 'live'}
+              reactions={floatingReactions}
             />
           </div>
         </div>

@@ -50,13 +50,14 @@ console.log('✅ Supabase Configuration:', {
 });
 
 // Create Supabase client with production configuration
+// CRITICAL: Don't specify storage - let Supabase use cookies for SSR/middleware compatibility
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     flowType: 'pkce',
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    // NO storage property - Supabase will use cookies by default, compatible with middleware
   }
 });
 

@@ -62,8 +62,17 @@ export default function LiveViewerPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessageWithProfile[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isPrivateMessage, setIsPrivateMessage] = useState(false);
-  const [reactions, setReactions] = useState<{ [key: string]: number }>({ heart: 0, thumbs: 0, star: 0 });
-  const [userReacted, setUserReacted] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<{ [key: string]: number }>({
+    heart: 0,
+    laugh: 0,
+    wow: 0,
+    sad: 0,
+    clap: 0,
+    fire: 0,
+    hundred: 0,
+    rocket: 0
+  });
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
@@ -347,46 +356,44 @@ export default function LiveViewerPage() {
     }
   }, [streamId]);
 
+  // Instagram-style rapid reaction handler - no toggle, just send!
   const handleReaction = (type: string) => {
-    if (userReacted === type) {
-      setUserReacted(null);
-      setReactions(prev => ({ ...prev, [type]: Math.max(0, prev[type] - 1) }));
-    } else {
-      if (userReacted) {
-        setReactions(prev => ({ ...prev, [userReacted]: Math.max(0, prev[userReacted] - 1) }));
-      }
-      setUserReacted(type);
-      setReactions(prev => ({ ...prev, [type]: prev[type] + 1 }));
+    // Always increment count (track for AI analytics)
+    setReactions(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
 
-      // Map reaction type to emoji for local floating animation
-      const emojiMap: { [key: string]: string } = {
-        heart: '❤️',
-        thumbs: '👍',
-        star: '⭐',
-        fire: '🔥',
-        clap: '👏',
-        love: '😍',
-        wow: '🤯',
-        rocket: '🚀',
-        hundred: '💯'
-      };
+    // Map reaction type to emoji for local floating animation
+    const emojiMap: { [key: string]: string } = {
+      heart: '❤️',
+      laugh: '😂',
+      wow: '😮',
+      sad: '😢',
+      clap: '👏',
+      fire: '🔥',
+      hundred: '💯',
+      rocket: '🚀',
+      thumbs: '👍',
+      star: '⭐',
+      love: '😍',
+      cool: '😎',
+      party: '🎉',
+      mind: '🤯'
+    };
 
-      const emoji = emojiMap[type] || '❤️';
+    const emoji = emojiMap[type] || '❤️';
 
-      // Add local floating reaction immediately
-      const newReaction = {
-        id: `local-${Date.now()}-${Math.random()}`,
-        emoji,
-        x: Math.random() * 80 + 10,
-        y: Math.random() * 80 + 10,
-        timestamp: Date.now()
-      };
-      setFloatingReactions(prev => [...prev, newReaction].slice(-20));
+    // Add local floating reaction immediately (Instagram-style)
+    const newReaction = {
+      id: `local-${Date.now()}-${Math.random()}`,
+      emoji,
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 80 + 10,
+      timestamp: Date.now()
+    };
+    setFloatingReactions(prev => [...prev, newReaction].slice(-20));
 
-      // Send reaction via WebSocket (will trigger for other viewers)
-      if (connected) {
-        sendReaction(type);
-      }
+    // Send reaction via WebSocket (will trigger for other viewers)
+    if (connected) {
+      sendReaction(type);
     }
   };
 
@@ -549,34 +556,98 @@ export default function LiveViewerPage() {
               </div>
             </div>
 
-            {/* Reaction Bar */}
-            <div className="flex items-center justify-between bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-4">
-              <div className="flex items-center gap-4">
-                <span className="text-purple-300 text-sm">React:</span>
-                <div className="flex gap-2">
+            {/* Instagram-Style Reaction Bar */}
+            <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 shadow-2xl">
+              <div className="flex items-center justify-between gap-6">
+                {/* Quick Reactions - Instagram Style */}
+                <div className="flex items-center gap-3">
                   {[
-                    { type: 'heart', icon: Heart, count: reactions.heart + 156 },
-                    { type: 'thumbs', icon: ThumbsUp, count: reactions.thumbs + 89 },
-                    { type: 'star', icon: Star, count: reactions.star + 67 }
-                  ].map(({ type, icon: Icon, count }) => (
-                    <button
+                    { type: 'heart', emoji: '❤️' },
+                    { type: 'laugh', emoji: '😂' },
+                    { type: 'wow', emoji: '😮' },
+                    { type: 'clap', emoji: '👏' },
+                    { type: 'fire', emoji: '🔥' },
+                    { type: 'rocket', emoji: '🚀' }
+                  ].map(({ type, emoji }) => (
+                    <motion.button
                       key={type}
                       onClick={() => handleReaction(type)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                        userReacted === type
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-slate-700/50 text-purple-200 hover:bg-slate-700'
-                      }`}
+                      whileTap={{ scale: 1.3 }}
+                      whileHover={{ scale: 1.15 }}
+                      className="relative group w-14 h-14 rounded-full bg-gradient-to-br from-purple-600/20 to-indigo-600/20 hover:from-purple-600/40 hover:to-indigo-600/40 border border-purple-500/30 hover:border-purple-400/60 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-purple-500/30"
                     >
-                      <Icon className="w-4 h-4" />
-                      <span className="text-sm">{count}</span>
-                    </button>
+                      <span className="text-3xl filter drop-shadow-lg group-hover:scale-110 transition-transform">
+                        {emoji}
+                      </span>
+
+                      {/* Ripple effect on click */}
+                      <motion.div
+                        className="absolute inset-0 rounded-full bg-purple-400/30"
+                        initial={{ scale: 0, opacity: 0 }}
+                        whileTap={{ scale: 2, opacity: [0, 1, 0] }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </motion.button>
                   ))}
                 </div>
-              </div>
 
-              <div className="text-sm text-purple-300">
-                {viewerCount.toLocaleString()} viewers reacted
+                {/* Emoji Picker Button */}
+                <div className="relative">
+                  <motion.button
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600/30 to-pink-600/30 hover:from-purple-600/50 hover:to-pink-600/50 border-2 border-purple-400/40 hover:border-purple-400/70 flex items-center justify-center transition-all duration-200 shadow-lg"
+                  >
+                    <motion.span
+                      className="text-2xl"
+                      animate={{ rotate: showEmojiPicker ? 45 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      ➕
+                    </motion.span>
+                  </motion.button>
+
+                  {/* Emoji Picker Popup */}
+                  <AnimatePresence>
+                    {showEmojiPicker && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                        className="absolute bottom-full right-0 mb-4 bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-4 shadow-2xl z-50"
+                      >
+                        <div className="grid grid-cols-4 gap-2 mb-3">
+                          {[
+                            { type: 'love', emoji: '😍' },
+                            { type: 'cool', emoji: '😎' },
+                            { type: 'party', emoji: '🎉' },
+                            { type: 'mind', emoji: '🤯' },
+                            { type: 'hundred', emoji: '💯' },
+                            { type: 'star', emoji: '⭐' },
+                            { type: 'thumbs', emoji: '👍' },
+                            { type: 'sad', emoji: '😢' }
+                          ].map(({ type, emoji }) => (
+                            <motion.button
+                              key={type}
+                              onClick={() => {
+                                handleReaction(type);
+                                setShowEmojiPicker(false);
+                              }}
+                              whileTap={{ scale: 1.3 }}
+                              whileHover={{ scale: 1.2 }}
+                              className="w-12 h-12 rounded-xl bg-slate-700/50 hover:bg-purple-600/30 flex items-center justify-center transition-all"
+                            >
+                              <span className="text-2xl">{emoji}</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                        <div className="text-center text-xs text-purple-300/70 border-t border-purple-500/20 pt-2">
+                          Tap to react instantly
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </div>

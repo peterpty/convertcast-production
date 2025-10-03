@@ -55,10 +55,12 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Refresh session if expired - this mutates the supabase instance
+  // Get user without triggering session refresh (prevents cookie conflicts with multiple windows)
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const session = user ? { user } : null;
 
   const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
   const isDashboardPage = req.nextUrl.pathname.startsWith('/dashboard');

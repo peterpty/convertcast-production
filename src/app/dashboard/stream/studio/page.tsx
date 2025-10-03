@@ -69,20 +69,28 @@ export default function StreamStudioPage() {
           return;
         }
 
-        // Production code: Get the most recent active or live stream
+        // Production code: Get the user's most recent active or live stream
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
         const { data: stream, error: streamError } = await supabase
           .from('streams')
           .select(`
             *,
-            events (
+            events!inner (
               id,
               title,
               description,
               scheduled_start,
               scheduled_end,
-              status
+              status,
+              user_id
             )
           `)
+          .eq('events.user_id', user.id)
           .in('status', ['active', 'live'])
           .order('created_at', { ascending: false })
           .limit(1)

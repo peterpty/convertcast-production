@@ -98,29 +98,35 @@ export default function UnifiedDashboard() {
           console.warn('⚠️ Dashboard: API fetch failed, trying database...');
         }
 
-        // Fallback: Try to get from Supabase database
+        // Fallback: Try to get from Supabase database (user's own streams only)
         try {
-          const { data: stream, error: streamError } = await supabase
-            .from('streams')
-            .select(`
-              id,
-              mux_playback_id,
-              status,
-              events (
-                title,
-                status
-              )
-            `)
-            .in('status', ['active', 'live'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+          const { data: { user } } = await supabase.auth.getUser();
 
-          if (!streamError && stream) {
-            console.log('✅ Dashboard: Using database stream:', stream.id);
-            setActiveStream(stream as any);
-            setStreamLoading(false);
-            return;
+          if (user) {
+            const { data: stream, error: streamError } = await supabase
+              .from('streams')
+              .select(`
+                id,
+                mux_playback_id,
+                status,
+                events!inner (
+                  title,
+                  status,
+                  user_id
+                )
+              `)
+              .eq('events.user_id', user.id)
+              .in('status', ['active', 'live'])
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (!streamError && stream) {
+              console.log('✅ Dashboard: Using user\'s database stream:', stream.id);
+              setActiveStream(stream as any);
+              setStreamLoading(false);
+              return;
+            }
           }
         } catch (dbError) {
           console.warn('⚠️ Dashboard: Database fetch failed, using demo...');

@@ -58,24 +58,17 @@ export function StreamSetupWizard({ stream, onSetupComplete }: StreamSetupWizard
       try {
         console.log('🔄 Initializing production streaming...');
 
-
-        // First try to get the latest existing stream, or create a new one
-        console.log('🎥 Getting latest stream...');
-        let response = await fetch('/api/mux/stream/latest');
-
-        if (!response.ok) {
-          console.log('🎥 No existing stream, creating new one...');
-          // No existing stream, create a new one
-          response = await fetch('/api/mux/stream', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              eventTitle: stream.events.title || 'Live Stream'
-            })
-          });
-        }
+        // ALWAYS create a NEW stream for this user (don't reuse existing streams)
+        console.log('🎥 Creating new Mux stream for user...');
+        const response = await fetch('/api/mux/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            eventTitle: stream.events.title || 'Live Stream'
+          })
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to create stream: ${response.status}`);

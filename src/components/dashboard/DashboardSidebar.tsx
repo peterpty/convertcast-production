@@ -16,7 +16,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  User
+  User,
+  Play
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -54,36 +55,60 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
 
   return (
     <motion.div
-      className={`fixed left-0 top-0 h-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-purple-500/20 z-50 ${className}`}
+      className={`fixed left-0 top-0 h-full bg-gradient-to-b from-slate-900 to-slate-950 border-r border-purple-500/20 z-50 overflow-hidden ${className}`}
       initial={false}
       animate={{
         width: isCollapsed ? '80px' : '280px',
       }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
     >
-      {/* Header with Logo */}
-      <div className="p-6 border-b border-purple-500/20">
-        <div className="flex items-center justify-between">
-          <motion.div
-            className="flex items-center"
-            animate={{ opacity: isCollapsed ? 0 : 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ConvertCastLogo size="sm" />
-          </motion.div>
-
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 rounded-lg bg-purple-600/10 border border-purple-500/20 hover:bg-purple-600/20 transition-colors"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-purple-300" />
-            ) : (
-              <ChevronLeft className="w-4 h-4 text-purple-300" />
-            )}
-          </button>
-        </div>
+      {/* Floating Gradient Blobs (like homepage) */}
+      <div className="absolute inset-0 pointer-events-none">
+        <motion.div
+          className="absolute top-10 right-5 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"
+          animate={{ y: [0, -10, 0], scale: [1, 1.05, 1] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-20 left-5 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"
+          animate={{ y: [0, 10, 0], scale: [1, 0.95, 1] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
+
+      {/* Content with relative positioning */}
+      <div className="relative h-full flex flex-col">
+        {/* Header with Logo */}
+        <div className="p-6 border-b border-purple-500/30 bg-gradient-to-r from-purple-500/5 to-blue-500/5">
+          <div className="flex items-center justify-between">
+            <motion.div
+              className="flex items-center gap-3"
+              animate={{ opacity: isCollapsed ? 0 : 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* Homepage-style Logo */}
+              <Link href="/" className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+                  <Play className="w-6 h-6 text-white" fill="currentColor" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                  ConvertCast
+                </span>
+              </Link>
+            </motion.div>
+
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 hover:from-purple-600/30 hover:to-blue-600/30 transition-all duration-200"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-purple-300" />
+              ) : (
+                <ChevronLeft className="w-4 h-4 text-purple-300" />
+              )}
+            </button>
+          </div>
+        </div>
 
       {/* User Profile Section */}
       <div className="p-6 border-b border-purple-500/20">
@@ -113,7 +138,7 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {navigationItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
@@ -122,8 +147,8 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
               <motion.div
                 className={`group relative flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 text-white'
-                    : 'text-purple-200 hover:bg-purple-600/10 hover:text-white'
+                    ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/40 text-white shadow-lg'
+                    : 'text-purple-200 hover:bg-gradient-to-r hover:from-purple-600/10 hover:to-blue-600/10 hover:text-white hover:border hover:border-purple-500/20'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -166,10 +191,10 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
       </nav>
 
       {/* Logout Button */}
-      <div className="p-4 border-t border-purple-500/20">
+      <div className="p-4 border-t border-purple-500/30 bg-gradient-to-r from-red-500/5 to-purple-500/5">
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center px-4 py-3 text-purple-200 hover:text-white hover:bg-red-600/10 rounded-xl transition-all duration-200 group"
+          className="w-full flex items-center px-4 py-3 text-purple-200 hover:text-white hover:bg-gradient-to-r hover:from-red-600/20 hover:to-red-700/20 rounded-xl transition-all duration-200 group border border-transparent hover:border-red-500/30"
         >
           <LogOut className="w-5 h-5 text-red-400" />
           <motion.span
@@ -187,6 +212,7 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
             </div>
           )}
         </button>
+      </div>
       </div>
     </motion.div>
   );

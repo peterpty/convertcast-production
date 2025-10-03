@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
@@ -49,17 +50,9 @@ console.log('✅ Supabase Configuration:', {
   mode: 'PRODUCTION'
 });
 
-// Create Supabase client with production configuration
-// CRITICAL: Don't specify storage - let Supabase use cookies for SSR/middleware compatibility
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce',
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    // NO storage property - Supabase will use cookies by default, compatible with middleware
-  }
-});
+// Create Supabase BROWSER client with SSR/cookie support
+// CRITICAL: Use createBrowserClient from @supabase/ssr for cookie-based sessions
+export const supabase = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 
 // Admin client for server-side operations
 // Only create if service key is available (server-side only)

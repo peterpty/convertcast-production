@@ -405,8 +405,8 @@ export function OverlayRenderer({ overlayState, viewerCount, streamId, connected
         </div>
       )}
 
-      {/* Floating Reactions - Instagram Style */}
-      {overlayState.engageMax.reactions.enabled && overlayState.engageMax.reactions.position === 'floating' && (
+      {/* Floating Reactions - Instagram Style - Always Show */}
+      {reactions && reactions.length > 0 && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {reactions.map((reaction) => (
             <div

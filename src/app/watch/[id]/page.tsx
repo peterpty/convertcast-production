@@ -73,6 +73,7 @@ export default function LiveViewerPage() {
     rocket: 0
   });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
@@ -275,6 +276,20 @@ export default function LiveViewerPage() {
 
     return () => clearInterval(cleanup);
   }, []);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showEmojiPicker]);
 
   // Load stream data from Supabase
   useEffect(() => {
@@ -592,7 +607,7 @@ export default function LiveViewerPage() {
                 </div>
 
                 {/* Emoji Picker Button */}
-                <div className="relative">
+                <div className="relative" ref={emojiPickerRef}>
                   <motion.button
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     whileTap={{ scale: 0.95 }}
@@ -614,6 +629,7 @@ export default function LiveViewerPage() {
                         initial={{ opacity: 0, scale: 0.8, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                        transition={{ duration: 0.2 }}
                         className="absolute bottom-full right-0 mb-4 bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-4 shadow-2xl z-50"
                       >
                         <div className="grid grid-cols-4 gap-2 mb-3">

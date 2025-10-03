@@ -641,17 +641,17 @@ export default function LiveViewerPage() {
                     <motion.button
                       key={type}
                       onClick={() => handleReaction(type)}
-                      whileTap={{ scale: 1.3 }}
+                      whileTap={{ scale: 1.4 }}
                       whileHover={{ scale: 1.15 }}
-                      className="relative group w-14 h-14 rounded-full bg-gradient-to-br from-purple-600/20 to-indigo-600/20 hover:from-purple-600/40 hover:to-indigo-600/40 border border-purple-500/30 hover:border-purple-400/60 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-purple-500/30"
+                      className="relative w-14 h-14 flex items-center justify-center hover:bg-purple-600/10 rounded-full transition-colors"
                     >
-                      <span className="text-3xl filter drop-shadow-lg group-hover:scale-110 transition-transform">
+                      <span className="text-4xl filter drop-shadow-lg">
                         {emoji}
                       </span>
 
                       {/* Ripple effect on click */}
                       <motion.div
-                        className="absolute inset-0 rounded-full bg-purple-400/30"
+                        className="absolute inset-0 rounded-full bg-purple-400/20"
                         initial={{ scale: 0, opacity: 0 }}
                         whileTap={{ scale: 2, opacity: [0, 1, 0] }}
                         transition={{ duration: 0.5 }}
@@ -665,10 +665,10 @@ export default function LiveViewerPage() {
                   <motion.button
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     whileTap={{ scale: 0.95 }}
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600/30 to-pink-600/30 hover:from-purple-600/50 hover:to-pink-600/50 border-2 border-purple-400/40 hover:border-purple-400/70 flex items-center justify-center transition-all duration-200 shadow-lg"
+                    className="w-14 h-14 rounded-full hover:bg-purple-600/10 flex items-center justify-center transition-colors"
                   >
                     <motion.span
-                      className="text-2xl"
+                      className="text-3xl opacity-60 hover:opacity-100 transition-opacity"
                       animate={{ rotate: showEmojiPicker ? 45 : 0 }}
                       transition={{ duration: 0.3 }}
                     >

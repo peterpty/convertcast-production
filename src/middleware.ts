@@ -1,12 +1,61 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
 
-  // Refresh session if expired
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+        },
+      },
+    }
+  );
+
+  // Refresh session if expired - this mutates the supabase instance
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -18,16 +67,18 @@ export async function middleware(req: NextRequest) {
 
   // If trying to access dashboard without auth, redirect to login
   if (isDashboardPage && !session) {
-    return NextResponse.redirect(new URL('/auth/login', req.url));
+    const loginUrl = new URL('/auth/login', req.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   // If trying to access auth pages while already authenticated, redirect to dashboard
   // EXCEPT for callback, reset-password, and update-password pages
   if (isAuthPage && session && !req.nextUrl.pathname.includes('/callback') && !isPasswordResetPage) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    const dashboardUrl = new URL('/dashboard', req.url);
+    return NextResponse.redirect(dashboardUrl);
   }
 
-  return res;
+  return response;
 }
 
 export const config = {

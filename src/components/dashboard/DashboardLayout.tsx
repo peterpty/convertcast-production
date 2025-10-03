@@ -34,20 +34,20 @@ export function DashboardLayout({ children, title, description }: DashboardLayou
 
       <DashboardSidebar />
 
-      {/* Main Content Area */}
-      <div className="pl-80 relative z-10">
+      {/* Main Content Area - padding matches expanded sidebar width (280px = pl-[280px]) */}
+      <div className="pl-[280px] relative z-10 transition-all duration-300">
         <div className="min-h-screen">
           {/* Page Header */}
           {(title || description) && (
             <div className="bg-gradient-to-r from-purple-500/5 to-blue-500/5 backdrop-blur-xl border-b border-purple-500/20 sticky top-0 z-40">
               <div className="px-8 py-6">
                 {title && (
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-1">
                     {title}
                   </h1>
                 )}
                 {description && (
-                  <p className="text-purple-200/80 mt-2">{description}</p>
+                  <p className="text-purple-200/70 mt-1">{description}</p>
                 )}
               </div>
             </div>

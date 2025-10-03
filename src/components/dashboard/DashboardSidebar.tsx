@@ -81,60 +81,105 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
         {/* Header with Logo */}
         <div className="p-6 border-b border-purple-500/30 bg-gradient-to-r from-purple-500/5 to-blue-500/5">
           <div className="flex items-center justify-between">
-            <motion.div
-              className="flex items-center gap-3"
-              animate={{ opacity: isCollapsed ? 0 : 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              {/* Homepage-style Logo */}
-              <Link href="/" className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+            {/* Logo - changes based on collapsed state */}
+            {isCollapsed ? (
+              <Link href="/" className="mx-auto">
+                <motion.div
+                  className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <Play className="w-6 h-6 text-white" fill="currentColor" />
-                </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
-                  ConvertCast
-                </span>
+                </motion.div>
               </Link>
-            </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Link href="/" className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+                    <Play className="w-6 h-6 text-white" fill="currentColor" />
+                  </div>
+                  <span className="text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                    ConvertCast
+                  </span>
+                </Link>
+              </motion.div>
+            )}
 
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 hover:from-purple-600/30 hover:to-blue-600/30 transition-all duration-200"
-            >
-              {isCollapsed ? (
-                <ChevronRight className="w-4 h-4 text-purple-300" />
-              ) : (
+            {/* Collapse/Expand Button - only show when expanded */}
+            {!isCollapsed && (
+              <motion.button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 hover:from-purple-600/30 hover:to-blue-600/30 transition-all duration-200"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
                 <ChevronLeft className="w-4 h-4 text-purple-300" />
-              )}
-            </button>
+              </motion.button>
+            )}
           </div>
+
+          {/* Expand button when collapsed - at bottom of logo area */}
+          {isCollapsed && (
+            <motion.button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="w-full mt-4 p-2 rounded-lg bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 hover:from-purple-600/30 hover:to-blue-600/30 transition-all duration-200 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+            >
+              <ChevronRight className="w-4 h-4 text-purple-300" />
+            </motion.button>
+          )}
         </div>
 
       {/* User Profile Section */}
       <div className="p-6 border-b border-purple-500/20">
-        <div className="flex items-center space-x-3">
-          {user?.user_metadata?.avatar_url ? (
-            <img
-              src={user.user_metadata.avatar_url}
-              alt="User avatar"
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
-          )}
-          <motion.div
-            className="flex-1 min-w-0"
-            animate={{ opacity: isCollapsed ? 0 : 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <p className="text-sm font-semibold text-white truncate">
-              {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-            </p>
-            <p className="text-xs text-purple-300 truncate">{user?.email || 'user@example.com'}</p>
-          </motion.div>
-        </div>
+        {isCollapsed ? (
+          <div className="flex justify-center">
+            {user?.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt="User avatar"
+                className="w-10 h-10 rounded-full ring-2 ring-purple-500/30"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center ring-2 ring-purple-500/30">
+                <User className="w-5 h-5 text-white" />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center space-x-3">
+            {user?.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt="User avatar"
+                className="w-10 h-10 rounded-full ring-2 ring-purple-500/30"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center ring-2 ring-purple-500/30">
+                <User className="w-5 h-5 text-white" />
+              </div>
+            )}
+            <motion.div
+              className="flex-1 min-w-0"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <p className="text-sm font-semibold text-white truncate">
+                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+              </p>
+              <p className="text-xs text-purple-300 truncate">{user?.email || 'user@example.com'}</p>
+            </motion.div>
+          </div>
+        )}
       </div>
 
       {/* Navigation Items */}
@@ -145,7 +190,9 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
           return (
             <Link key={item.name} href={item.href}>
               <motion.div
-                className={`group relative flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
+                className={`group relative flex items-center rounded-xl transition-all duration-200 ${
+                  isCollapsed ? 'justify-center px-3 py-3' : 'px-4 py-3'
+                } ${
                   isActive
                     ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/40 text-white shadow-lg'
                     : 'text-purple-200 hover:bg-gradient-to-r hover:from-purple-600/10 hover:to-blue-600/10 hover:text-white hover:border hover:border-purple-500/20'
@@ -153,22 +200,22 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <item.icon className={`w-5 h-5 ${isActive ? 'text-purple-300' : 'text-purple-400'}`} />
+                <item.icon className={`w-5 h-5 ${isActive ? 'text-purple-300' : 'text-purple-400'} ${isCollapsed ? '' : 'flex-shrink-0'}`} />
 
-                <motion.div
-                  className="ml-3 flex-1"
-                  animate={{
-                    opacity: isCollapsed ? 0 : 1,
-                    width: isCollapsed ? 0 : 'auto'
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="text-sm font-medium">{item.name}</div>
-                  <div className="text-xs text-purple-400">{item.description}</div>
-                </motion.div>
+                {!isCollapsed && (
+                  <motion.div
+                    className="ml-3 flex-1"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="text-sm font-medium">{item.name}</div>
+                    <div className="text-xs text-purple-400">{item.description}</div>
+                  </motion.div>
+                )}
 
                 {/* Active indicator */}
-                {isActive && (
+                {isActive && !isCollapsed && (
                   <motion.div
                     className="absolute right-2 w-2 h-2 bg-purple-400 rounded-full"
                     initial={{ scale: 0 }}
@@ -177,11 +224,21 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
                   />
                 )}
 
+                {/* Active indicator for collapsed state */}
+                {isActive && isCollapsed && (
+                  <motion.div
+                    className="absolute -right-1 w-1 h-8 bg-purple-400 rounded-l-full"
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: 1 }}
+                    transition={{ duration: 0.2 }}
+                  />
+                )}
+
                 {/* Tooltip for collapsed state */}
                 {isCollapsed && (
-                  <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg border border-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-purple-300">{item.description}</div>
+                  <div className="absolute left-full ml-4 px-4 py-3 bg-slate-800/95 backdrop-blur-sm text-white text-sm rounded-xl border border-purple-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl">
+                    <div className="font-semibold text-purple-300">{item.name}</div>
+                    <div className="text-xs text-purple-400 mt-1">{item.description}</div>
                   </div>
                 )}
               </motion.div>
@@ -194,21 +251,26 @@ export function DashboardSidebar({ className = '' }: DashboardSidebarProps) {
       <div className="p-4 border-t border-purple-500/30 bg-gradient-to-r from-red-500/5 to-purple-500/5">
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center px-4 py-3 text-purple-200 hover:text-white hover:bg-gradient-to-r hover:from-red-600/20 hover:to-red-700/20 rounded-xl transition-all duration-200 group border border-transparent hover:border-red-500/30"
+          className={`w-full flex items-center py-3 text-purple-200 hover:text-white hover:bg-gradient-to-r hover:from-red-600/20 hover:to-red-700/20 rounded-xl transition-all duration-200 group border border-transparent hover:border-red-500/30 ${
+            isCollapsed ? 'justify-center px-3' : 'px-4'
+          }`}
         >
           <LogOut className="w-5 h-5 text-red-400" />
-          <motion.span
-            className="ml-3 text-sm font-medium"
-            animate={{ opacity: isCollapsed ? 0 : 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            Logout
-          </motion.span>
+          {!isCollapsed && (
+            <motion.span
+              className="ml-3 text-sm font-medium"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              Logout
+            </motion.span>
+          )}
 
           {/* Tooltip for collapsed state */}
           {isCollapsed && (
-            <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg border border-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
-              Logout
+            <div className="absolute left-full ml-4 px-4 py-2 bg-slate-800/95 backdrop-blur-sm text-white text-sm rounded-xl border border-red-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl">
+              <div className="font-semibold text-red-300">Logout</div>
             </div>
           )}
         </button>

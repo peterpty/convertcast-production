@@ -53,7 +53,46 @@ function createMockClient() {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      signInWithOAuth: () => Promise.resolve({ data: { url: null, provider: 'google' }, error: new Error('Mock mode: OAuth not available') }),
+      signInWithOAuth: () => Promise.resolve({
+        data: { url: null, provider: 'google' },
+        error: {
+          message: 'Authentication is disabled. Please contact support to enable authentication.',
+          status: 503,
+          name: 'MockModeError'
+        }
+      }),
+      signInWithPassword: () => Promise.resolve({
+        data: { user: null, session: null },
+        error: {
+          message: 'Authentication is disabled. Please contact support to enable authentication.',
+          status: 503,
+          name: 'MockModeError'
+        }
+      }),
+      signUp: () => Promise.resolve({
+        data: { user: null, session: null },
+        error: {
+          message: 'Authentication is disabled. Please contact support to enable authentication.',
+          status: 503,
+          name: 'MockModeError'
+        }
+      }),
+      resetPasswordForEmail: () => Promise.resolve({
+        data: {},
+        error: {
+          message: 'Authentication is disabled. Please contact support to enable authentication.',
+          status: 503,
+          name: 'MockModeError'
+        }
+      }),
+      updateUser: () => Promise.resolve({
+        data: { user: null },
+        error: {
+          message: 'Authentication is disabled. Please contact support to enable authentication.',
+          status: 503,
+          name: 'MockModeError'
+        }
+      }),
       signOut: () => Promise.resolve({ error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
     }

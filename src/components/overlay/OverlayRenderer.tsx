@@ -53,16 +53,24 @@ interface OverlayState {
   };
 }
 
+interface ReactionItem {
+  id: string;
+  emoji: string;
+  x: number;
+  y: number;
+  timestamp: number;
+}
+
 interface OverlayRendererProps {
   overlayState: OverlayState;
   viewerCount: number;
   streamId: string;
   connected: boolean;
+  reactions?: ReactionItem[];
 }
 
-export function OverlayRenderer({ overlayState, viewerCount, streamId, connected }: OverlayRendererProps) {
+export function OverlayRenderer({ overlayState, viewerCount, streamId, connected, reactions = [] }: OverlayRendererProps) {
   const [countdown, setCountdown] = useState('');
-  const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
 
   // Update countdown timer
   useEffect(() => {
@@ -71,7 +79,7 @@ export function OverlayRenderer({ overlayState, viewerCount, streamId, connected
         const target = new Date(overlayState.countdown.targetTime);
         const now = new Date();
         const diff = target.getTime() - now.getTime();
-        
+
         if (diff > 0) {
           const hours = Math.floor(diff / (1000 * 60 * 60));
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -81,40 +89,12 @@ export function OverlayRenderer({ overlayState, viewerCount, streamId, connected
           setCountdown('00:00:00');
         }
       }, 1000);
-      
+
       return () => clearInterval(interval);
     }
   }, [overlayState.countdown.visible, overlayState.countdown.targetTime]);
 
-  // Simulate floating reactions
-  useEffect(() => {
-    if (overlayState.engageMax.reactions.enabled) {
-      const interval = setInterval(() => {
-        const emojis = ['❤️', '👍', '👏', '🔥', '😍', '🤯', '💯', '🚀'];
-        const newReaction = {
-          id: Date.now().toString(),
-          emoji: emojis[Math.floor(Math.random() * emojis.length)],
-          x: Math.random() * 100,
-          y: Math.random() * 100,
-          timestamp: Date.now()
-        };
-        
-        setReactions(prev => [...prev, newReaction].slice(-20)); // Keep last 20
-      }, 2000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [overlayState.engageMax.reactions.enabled]);
-
-  // Clean up old reactions
-  useEffect(() => {
-    const cleanup = setInterval(() => {
-      const now = Date.now();
-      setReactions(prev => prev.filter(reaction => now - reaction.timestamp < 10000)); // Remove after 10s
-    }, 1000);
-    
-    return () => clearInterval(cleanup);
-  }, []);
+  // Note: Reactions are now managed by parent component
 
   const getPositionClasses = (position: string) => {
     switch (position) {

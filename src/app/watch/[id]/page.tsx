@@ -66,6 +66,7 @@ export default function LiveViewerPage() {
   const [userReacted, setUserReacted] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
+  const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
 
   // Transform WebSocket overlay data to OverlayState format
   const overlayState = overlayData ? {
@@ -172,6 +173,33 @@ export default function LiveViewerPage() {
       setChatMessages(prev => [...prev, chatMessage]);
     },
     onViewerReaction: (reaction: any) => {
+      // Map reaction types to emojis
+      const emojiMap: { [key: string]: string } = {
+        heart: '❤️',
+        thumbs: '👍',
+        star: '⭐',
+        fire: '🔥',
+        clap: '👏',
+        love: '😍',
+        wow: '🤯',
+        rocket: '🚀',
+        hundred: '💯'
+      };
+
+      const emoji = emojiMap[reaction.reactionType] || '❤️';
+
+      // Add floating reaction with random position
+      const newReaction = {
+        id: `${Date.now()}-${Math.random()}`,
+        emoji,
+        x: Math.random() * 80 + 10, // Keep reactions within 10-90% range
+        y: Math.random() * 80 + 10,
+        timestamp: Date.now()
+      };
+
+      setFloatingReactions(prev => [...prev, newReaction].slice(-20)); // Keep last 20
+
+      // Update reaction counts for the bar
       setReactions(prev => ({
         ...prev,
         [reaction.reactionType]: (prev[reaction.reactionType] || 0) + 1
@@ -228,6 +256,16 @@ export default function LiveViewerPage() {
       unsubscribe();
     };
   }, [streamId]);
+
+  // Clean up old floating reactions after 10 seconds
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setFloatingReactions(prev => prev.filter(reaction => now - reaction.timestamp < 10000));
+    }, 1000);
+
+    return () => clearInterval(cleanup);
+  }, []);
 
   // Load stream data from Supabase
   useEffect(() => {
@@ -320,7 +358,32 @@ export default function LiveViewerPage() {
       setUserReacted(type);
       setReactions(prev => ({ ...prev, [type]: prev[type] + 1 }));
 
-      // Send reaction via WebSocket
+      // Map reaction type to emoji for local floating animation
+      const emojiMap: { [key: string]: string } = {
+        heart: '❤️',
+        thumbs: '👍',
+        star: '⭐',
+        fire: '🔥',
+        clap: '👏',
+        love: '😍',
+        wow: '🤯',
+        rocket: '🚀',
+        hundred: '💯'
+      };
+
+      const emoji = emojiMap[type] || '❤️';
+
+      // Add local floating reaction immediately
+      const newReaction = {
+        id: `local-${Date.now()}-${Math.random()}`,
+        emoji,
+        x: Math.random() * 80 + 10,
+        y: Math.random() * 80 + 10,
+        timestamp: Date.now()
+      };
+      setFloatingReactions(prev => [...prev, newReaction].slice(-20));
+
+      // Send reaction via WebSocket (will trigger for other viewers)
       if (connected) {
         sendReaction(type);
       }
@@ -479,6 +542,7 @@ export default function LiveViewerPage() {
                       viewerCount={viewerCount}
                       streamId={streamId}
                       connected={connected}
+                      reactions={floatingReactions}
                     />
                   </div>
                 )}

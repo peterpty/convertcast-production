@@ -10,7 +10,8 @@ import { Play, ArrowLeft } from 'lucide-react';
 export default function LoginPage() {
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const router = useRouter();
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isEmailAuthLoading, setIsEmailAuthLoading] = useState(false);
+  const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -25,13 +26,13 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      setIsSigningIn(true);
+      setIsGoogleAuthLoading(true);
       setError(null);
       await signInWithGoogle();
     } catch (err: any) {
       console.error('Sign in error:', err);
       setError(err.message || 'Failed to sign in with Google');
-      setIsSigningIn(false);
+      setIsGoogleAuthLoading(false);
     }
   };
 
@@ -49,7 +50,7 @@ export default function LoginPage() {
     }
 
     try {
-      setIsSigningIn(true);
+      setIsEmailAuthLoading(true);
       setError(null);
 
       if (mode === 'signin') {
@@ -66,7 +67,7 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('Auth error:', err);
       setError(err.message || `Failed to ${mode === 'signin' ? 'sign in' : 'sign up'}`);
-      setIsSigningIn(false);
+      setIsEmailAuthLoading(false);
     }
   };
 
@@ -184,7 +185,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    disabled={isSigningIn}
+                    disabled={isEmailAuthLoading}
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 transition-all"
                     required
                   />
@@ -200,7 +201,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    disabled={isSigningIn}
+                    disabled={isEmailAuthLoading}
                     className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 transition-all"
                     required
                     minLength={6}
@@ -222,12 +223,12 @@ export default function LoginPage() {
 
                 <motion.button
                   type="submit"
-                  disabled={isSigningIn}
+                  disabled={isEmailAuthLoading}
                   className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
-                  {isSigningIn ? (
+                  {isEmailAuthLoading ? (
                     <div className="flex items-center justify-center gap-3">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>{mode === 'signin' ? 'Signing in...' : 'Creating account...'}</span>
@@ -251,13 +252,13 @@ export default function LoginPage() {
               {/* Google Sign In Button */}
               <motion.button
                 onClick={handleGoogleSignIn}
-                disabled={isSigningIn}
+                disabled={isGoogleAuthLoading}
                 type="button"
                 className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl group"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
               >
-                {isSigningIn ? (
+                {isGoogleAuthLoading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
                     <span>Signing in...</span>

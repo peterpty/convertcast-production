@@ -5,6 +5,16 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
+// Timeout wrapper for promises
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs / 1000} seconds. Please check your internet connection and try again.`)), timeoutMs)
+    ),
+  ]);
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -81,17 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔗 AuthContext: Redirect URL:', redirectUrl);
       console.log('🔒 AuthContext: Flow Type: PKCE (configured in client)');
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: false,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        },
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            skipBrowserRedirect: false,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            }
+          },
+        }),
+        10000, // 10 second timeout
+        'Google sign in'
+      );
 
       if (error) {
         console.error('❌ AuthContext: OAuth error:', error);
@@ -116,10 +130,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔐 AuthContext: Signing in with email...');
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        10000, // 10 second timeout
+        'Email sign in'
+      );
 
       if (error) {
         console.error('❌ AuthContext: Email sign in error:', error);
@@ -138,13 +156,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔐 AuthContext: Signing up with email...');
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        }
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          }
+        }),
+        10000, // 10 second timeout
+        'Email sign up'
+      );
 
       if (error) {
         console.error('❌ AuthContext: Email sign up error:', error);

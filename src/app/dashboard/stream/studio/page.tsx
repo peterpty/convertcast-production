@@ -93,50 +93,51 @@ export default function StreamStudioPage() {
         }
 
         if (!stream) {
-          // Create a demo stream for testing
+          // No stream found - create a draft stream for setup wizard
           const { data: user } = await supabase.auth.getUser();
-          if (!user.user) {
-            // For demo purposes, create a demo stream
-            setActiveStream({
-              peak_viewers: 2000,
-              total_viewers: 5000,
-              id: 'demo-stream-id',
-              stream_key: 'demo-stream-key',
-              status: 'active',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              event_id: 'demo-event-id',
-              mux_stream_id: null,
-              mux_playback_id: null,
-              viewer_count: 1847,
-              engagemax_config: {
-                polls_enabled: true,
-                quizzes_enabled: true,
-                reactions_enabled: true,
-                ctas_enabled: true
-              },
-              autooffer_config: {
-                experiments_enabled: true,
-                dynamic_pricing: true,
-                behavioral_triggers: true
-              },
-              chat_config: {
-                enabled: true,
-                moderated: false,
-                ai_responses: true
-              },
-              events: {
-                id: 'demo-event-id',
-                title: 'Live: How to 10x Your Webinar Conversions',
-                description: 'Complete ConvertCast Studio demo featuring all 6 AI-powered features',
-                scheduled_start: new Date().toISOString(),
-                scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-                status: 'live'
-              } as Event
-            } as Stream & { events: Event });
-            setLoading(false);
-            return;
-          }
+
+          // Create a draft stream object for the setup wizard
+          setActiveStream({
+            peak_viewers: 0,
+            total_viewers: 0,
+            id: 'new-stream-' + Date.now(),
+            stream_key: null,
+            status: 'draft',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            event_id: 'new-event-' + Date.now(),
+            mux_stream_id: null,
+            mux_playback_id: null,
+            viewer_count: 0,
+            user_id: user.user?.id || null,
+            engagemax_config: {
+              polls_enabled: true,
+              quizzes_enabled: true,
+              reactions_enabled: true,
+              ctas_enabled: true
+            },
+            autooffer_config: {
+              experiments_enabled: true,
+              dynamic_pricing: true,
+              behavioral_triggers: true
+            },
+            chat_config: {
+              enabled: true,
+              moderated: false,
+              ai_responses: true
+            },
+            events: {
+              id: 'new-event-' + Date.now(),
+              title: 'My Live Stream',
+              description: 'Create your first live streaming event with ConvertCast',
+              scheduled_start: new Date().toISOString(),
+              scheduled_end: new Date(Date.now() + 3600000).toISOString(),
+              status: 'draft',
+              user_id: user.user?.id || null
+            } as Event
+          } as Stream & { events: Event });
+          setLoading(false);
+          return;
         }
 
         setActiveStream(stream as Stream & { events: Event });

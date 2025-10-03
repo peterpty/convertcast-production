@@ -610,7 +610,36 @@ export function StreamSetupWizard({ stream, onSetupComplete }: StreamSetupWizard
                 Back to Invites
               </button>
               <button
-                onClick={onSetupComplete}
+                onClick={async () => {
+                  try {
+                    console.log('💾 Saving stream to database...');
+                    const response = await fetch('/api/streams/save', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        eventTitle: stream.events?.title || 'My Live Stream',
+                        eventDescription: stream.events?.description || 'Live streaming event',
+                        muxStreamId: muxStream?.id,
+                        muxPlaybackId: muxStream?.playback_id,
+                        streamKey: streamKey
+                      })
+                    });
+
+                    if (!response.ok) {
+                      const error = await response.json();
+                      throw new Error(error.error || 'Failed to save stream');
+                    }
+
+                    const data = await response.json();
+                    console.log('✅ Stream saved to database:', data);
+
+                    // Call the setup complete callback
+                    onSetupComplete();
+                  } catch (error) {
+                    console.error('❌ Failed to save stream:', error);
+                    alert(`Failed to save stream: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  }
+                }}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-red-500/30 transition-all duration-200 flex items-center gap-2"
               >
                 <Play className="w-5 h-5" />

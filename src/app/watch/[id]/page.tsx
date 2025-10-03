@@ -11,6 +11,7 @@ import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
 import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
+import '@/styles/instagram-overlays.css';
 import {
   Users,
   Heart,
@@ -373,6 +374,8 @@ export default function LiveViewerPage() {
 
   // Instagram-style rapid reaction handler - no toggle, just send!
   const handleReaction = (type: string) => {
+    console.log('🎯 Reaction clicked:', type);
+
     // Always increment count (track for AI analytics)
     setReactions(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
 
@@ -404,7 +407,13 @@ export default function LiveViewerPage() {
       y: Math.random() * 80 + 10,
       timestamp: Date.now()
     };
-    setFloatingReactions(prev => [...prev, newReaction].slice(-20));
+
+    console.log('✨ Adding floating reaction:', newReaction);
+    setFloatingReactions(prev => {
+      const updated = [...prev, newReaction].slice(-20);
+      console.log('📊 Current floating reactions:', updated.length);
+      return updated;
+    });
 
     // Send reaction via WebSocket (will trigger for other viewers)
     if (connected) {
@@ -556,6 +565,35 @@ export default function LiveViewerPage() {
                   </div>
                 </div>
 
+                {/* Floating Reactions - Always Show */}
+                <div className="absolute inset-0 z-20 pointer-events-none">
+                  {floatingReactions.length > 0 && (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                      {floatingReactions.map((reaction) => (
+                        <div
+                          key={reaction.id}
+                          className="absolute animate-heart-float"
+                          style={{
+                            left: `${reaction.x}%`,
+                            top: `${reaction.y}%`,
+                            fontSize: '3rem',
+                            opacity: Math.max(0, 1 - (Date.now() - reaction.timestamp) / 10000),
+                            animationDuration: '4s',
+                            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
+                            zIndex: 30
+                          }}
+                        >
+                          {/* Instagram-style emoji with glow */}
+                          <div className="relative">
+                            <div className="absolute inset-0 blur-sm opacity-50">{reaction.emoji}</div>
+                            <div className="relative">{reaction.emoji}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Interactive Overlays from Studio */}
                 {overlayState && (
                   <div className="absolute inset-0 z-20 pointer-events-none">
@@ -564,7 +602,7 @@ export default function LiveViewerPage() {
                       viewerCount={viewerCount}
                       streamId={streamId}
                       connected={connected}
-                      reactions={floatingReactions}
+                      reactions={[]}
                     />
                   </div>
                 )}

@@ -11,6 +11,10 @@ import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
 import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
+import { BottomSheet } from '@/components/viewer/BottomSheet';
+import { TouchReactions } from '@/components/viewer/TouchReactions';
+import { MobileControls } from '@/components/viewer/MobileControls';
+import { useOrientation } from '@/hooks/useOrientation';
 import '@/styles/instagram-overlays.css';
 import {
   Users,
@@ -53,6 +57,8 @@ export default function LiveViewerPage() {
   const params = useParams();
   const streamId = params.id as string;
   const chatRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const orientation = useOrientation();
 
   // Generate a unique viewer ID for this session
   const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
@@ -73,11 +79,25 @@ export default function LiveViewerPage() {
     hundred: 0,
     rocket: 0
   });
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [overlayData, setOverlayData] = useState<any>(null);
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
+
+  // Mobile-specific state
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMuted, setIsMuted] = useState(false); // Start unmuted
+
+  // Detect mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Transform WebSocket overlay data to OverlayState format
   const overlayState = overlayData ? {
@@ -138,7 +158,6 @@ export default function LiveViewerPage() {
   } : null;
 
   // WebSocket connection for real-time features
-  // CRITICAL: Use actual database stream ID, not playback ID from URL
   const {
     connected,
     connectionStatus,
@@ -148,25 +167,20 @@ export default function LiveViewerPage() {
     eventLog,
     websocketUrl
   } = useWebSocket({
-    streamId: streamId, // Use playback ID directly for consistent room matching
+    streamId: streamId,
     userType: 'viewer',
-    userId: viewerId, // CRITICAL: Must match viewerId to prevent duplication
+    userId: viewerId,
     onViewerCountUpdate: (count: number) => setViewerCount(count),
     onOverlayUpdate: (data: any) => {
       console.log('📡 Overlay received in viewer:', data);
       setOverlayData(data);
     },
     onChatMessage: (message: any) => {
-      // Detect if message is from streamer/host
       const isHost = message.username === 'Streamer' || message.userId === 'streamer';
 
-      // Filter private messages - only show if:
-      // 1. Message is public (not private)
-      // 2. Message is from the current viewer (message.userId === viewerId)
-      // 3. Message is from the host (isHost === true)
       if (message.isPrivate && message.userId !== viewerId && !isHost) {
         console.log('🔒 Filtering out private message from another viewer');
-        return; // Don't show private messages from other viewers
+        return;
       }
 
       const chatMessage: ChatMessageWithProfile = {
@@ -187,14 +201,11 @@ export default function LiveViewerPage() {
     onViewerReaction: (reaction: any) => {
       console.log('📡 Received WebSocket reaction:', reaction);
 
-      // CRITICAL: Don't add floating reaction if it's from this viewer (avoid duplication)
-      // Local reactions are already added immediately in handleReaction()
       if (reaction.userId === viewerId || reaction.userId?.startsWith('local-')) {
         console.log('⏭️ Skipping own reaction to avoid duplication');
         return;
       }
 
-      // Unified emoji map (matches handleReaction exactly)
       const emojiMap: { [key: string]: string } = {
         heart: '❤️',
         laugh: '😂',
@@ -214,7 +225,6 @@ export default function LiveViewerPage() {
 
       const emoji = emojiMap[reaction.reactionType] || '❤️';
 
-      // Add floating reaction from other viewers
       const newReaction = {
         id: `remote-${Date.now()}-${Math.random()}`,
         emoji,
@@ -226,7 +236,6 @@ export default function LiveViewerPage() {
       console.log('✨ Adding remote reaction:', newReaction);
       setFloatingReactions(prev => [...prev, newReaction].slice(-20));
 
-      // Update reaction counts for analytics
       setReactions(prev => ({
         ...prev,
         [reaction.reactionType]: (prev[reaction.reactionType] || 0) + 1
@@ -270,7 +279,6 @@ export default function LiveViewerPage() {
     const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
       console.log('📨 New message from Supabase Realtime:', message);
 
-      // Add message if not already present (avoid duplicates from WebSocket)
       setChatMessages(prev => {
         const exists = prev.some(m => m.id === message.id);
         if (exists) return prev;
@@ -294,20 +302,6 @@ export default function LiveViewerPage() {
     return () => clearInterval(cleanup);
   }, []);
 
-  // Close emoji picker when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-    }
-
-    if (showEmojiPicker) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showEmojiPicker]);
-
   // Load stream data from Supabase
   useEffect(() => {
     async function loadStreamData() {
@@ -317,7 +311,6 @@ export default function LiveViewerPage() {
 
         console.log('🔍 Viewer: Looking up stream:', streamId);
 
-        // Try by mux_playback_id first
         const muxResult = await supabase
           .from('streams')
           .select(`
@@ -339,7 +332,6 @@ export default function LiveViewerPage() {
         let streamError = muxResult.error;
 
         if (!stream) {
-          // Fallback: Create minimal stream data if database lookup fails
           if (streamId.length > 20 && (streamId.includes('_') || streamId.length > 30)) {
             console.log('⚠️ Viewer: Database lookup failed, creating minimal fallback data');
             stream = {
@@ -388,14 +380,12 @@ export default function LiveViewerPage() {
     }
   }, [streamId]);
 
-  // Instagram-style rapid reaction handler - no toggle, just send!
+  // Instagram-style rapid reaction handler
   const handleReaction = (type: string) => {
     console.log('🎯 Reaction clicked:', type);
 
-    // Always increment count (track for AI analytics)
     setReactions(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
 
-    // Map reaction type to emoji for local floating animation
     const emojiMap: { [key: string]: string } = {
       heart: '❤️',
       laugh: '😂',
@@ -415,7 +405,6 @@ export default function LiveViewerPage() {
 
     const emoji = emojiMap[type] || '❤️';
 
-    // Add local floating reaction immediately (Instagram-style)
     const newReaction = {
       id: `local-${Date.now()}-${Math.random()}`,
       emoji,
@@ -431,7 +420,6 @@ export default function LiveViewerPage() {
       return updated;
     });
 
-    // Send reaction via WebSocket (will trigger for other viewers)
     if (connected) {
       sendReaction(type);
     }
@@ -442,10 +430,8 @@ export default function LiveViewerPage() {
     if (!newMessage.trim()) return;
 
     if (connected) {
-      // Send message via WebSocket with unique viewer ID and private flag
       sendChatMessage(newMessage, viewerId, isPrivateMessage);
     } else {
-      // Fallback: local message only
       const mockMessage: ChatMessageWithProfile = {
         id: Date.now().toString(),
         message: newMessage,
@@ -460,8 +446,43 @@ export default function LiveViewerPage() {
     }
 
     setNewMessage('');
-    setIsPrivateMessage(false); // Reset to public after sending
+    setIsPrivateMessage(false);
   };
+
+  // Fullscreen handlers
+  const toggleFullscreen = async () => {
+    if (!videoContainerRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await videoContainerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error('Fullscreen error:', err);
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Mute/unmute handler
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  // Network quality (mock for now, can be enhanced with real metrics)
+  const networkQuality: 'excellent' | 'good' | 'fair' | 'poor' | 'offline' = connected ? 'good' : 'offline';
 
   if (loading) {
     return (
@@ -488,6 +509,133 @@ export default function LiveViewerPage() {
     );
   }
 
+  // Chat content component (reused in both mobile and desktop)
+  const ChatContent = () => (
+    <>
+      {/* Chat Header */}
+      <div className="p-4 border-b border-purple-500/20">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-white flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Live Chat
+          </h3>
+          <div className="text-xs text-purple-300">
+            {chatMessages.length} messages
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Messages */}
+      <div
+        ref={chatRef}
+        className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-500/30 hide-scrollbar smooth-scroll"
+        style={{ maxHeight: isMobileView ? 'calc(60vh - 10rem)' : 'calc(100vh - 16rem)' }}
+      >
+        <div className="space-y-3">
+          {chatMessages.length === 0 ? (
+            <div className="text-center text-purple-300/60 py-8">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No messages yet. Be the first to chat!</p>
+            </div>
+          ) : (
+            chatMessages.map((message) => {
+              const displayName = message.viewer_profiles
+                ? `${message.viewer_profiles.first_name} ${message.viewer_profiles.last_name}`
+                : 'Anonymous Viewer';
+
+              const messageTime = new Date(message.created_at).toLocaleTimeString();
+              const isOwnMessage = message.sender_id === viewerId;
+
+              return (
+                <div
+                  key={message.id}
+                  className={`${message.is_private ? 'bg-purple-900/30 border border-purple-500/30 rounded-lg p-2' : ''}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {message.is_private && (
+                      <Lock className="w-3 h-3 text-purple-400" />
+                    )}
+                    <span className="text-xs font-medium text-purple-200">
+                      {displayName}
+                      {isOwnMessage && ' (You)'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {messageTime}
+                    </span>
+                    {message.is_private && (
+                      <span className="text-xs text-purple-400 font-medium">
+                        Private
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-white">{message.message}</div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Chat Input */}
+      <div className="p-4 border-t border-purple-500/20 mobile-safe-bottom">
+        <div className="mb-2 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setIsPrivateMessage(!isPrivateMessage)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all touch-target ${
+              isPrivateMessage
+                ? 'bg-purple-600 text-white'
+                : 'bg-slate-700/50 text-gray-400 hover:text-purple-300'
+            }`}
+          >
+            {isPrivateMessage ? (
+              <>
+                <Lock className="w-3 h-3" />
+                Private Message
+              </>
+            ) : (
+              <>
+                <Unlock className="w-3 h-3" />
+                Public Message
+              </>
+            )}
+          </button>
+          {isPrivateMessage && (
+            <span className="text-xs text-purple-300">
+              Only visible to host
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={sendMessage} className="flex gap-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder={isPrivateMessage ? "Send private message to host..." : "Type a message..."}
+            className={`flex-1 px-3 py-2 bg-slate-700/50 border ${
+              isPrivateMessage ? 'border-purple-400' : 'border-purple-500/30'
+            } rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-400`}
+          />
+          <button
+            type="submit"
+            disabled={!newMessage.trim() || !connected}
+            className={`p-2 touch-target ${
+              isPrivateMessage
+                ? 'bg-purple-700 hover:bg-purple-800'
+                : connected
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-gray-600'
+            } disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors`}
+            title={!connected ? 'Connection required to send messages' : ''}
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+    </>
+  );
+
   return (
     <WebSocketErrorBoundary
       connectionStatus={connectionStatus}
@@ -495,365 +643,211 @@ export default function LiveViewerPage() {
       isStudio={false}
     >
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900/50 to-purple-950/30 backdrop-blur-xl border-b border-purple-500/20 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-purple-200">
-                <Users className="w-4 h-4" />
-                <span className="text-sm">{viewerCount.toLocaleString()} watching</span>
-              </div>
-              {/* WebSocket Status Indicator */}
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
-                  connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? 'bg-yellow-400 animate-pulse' :
-                  'bg-red-400'
-                }`}></div>
-                <span className="text-xs text-gray-400">
-                  {connectionStatus === 'connected' ? 'Live' :
-                   connectionStatus === 'connecting' ? 'Connecting...' :
-                   connectionStatus === 'reconnecting' ? 'Reconnecting...' :
-                   'Offline'}
-                </span>
-              </div>
-            </div>
-
-            <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
-              {streamData.events.title}
-            </h1>
-
-            <div className="flex items-center gap-2">
-              <button className="p-2 text-purple-200 hover:text-white hover:bg-purple-600/20 rounded-lg transition-colors">
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button className="p-2 text-purple-200 hover:text-white hover:bg-purple-600/20 rounded-lg transition-colors">
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Video Player */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Video Container */}
-            <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
-              <div className="aspect-video">
-                {streamData.mux_playback_id ? (
-                  <MuxPlayer
-                    streamType="live"
-                    playbackId={streamData.mux_playback_id}
-                    metadata={{
-                      video_id: streamData.id,
-                      video_title: streamData.events.title,
-                      viewer_user_id: 'anonymous'
-                    }}
-                    autoPlay="muted"
-                    accentColor="#9f6aff"
-                    className="w-full h-full"
-                    style={{
-                      borderRadius: '1rem',
-                      '--loading-icon': 'none'
-                    }}
-                    onPlay={() => console.log('Stream started playing')}
-                    onPause={() => console.log('Stream paused')}
-                    onError={(error) => console.error('Stream error:', error)}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative">
-                    <div className="text-center">
-                      <Play className="w-16 h-16 text-white/50 mx-auto mb-4" />
-                      <p className="text-white/70">Stream not available</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Live Overlay */}
-                <div className="absolute top-4 right-4 z-10">
-                  <div className="bg-red-600/90 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1 backdrop-blur-sm">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                    LIVE
-                  </div>
+        {/* Header - Minimal on Mobile */}
+        <div className={`bg-gradient-to-r from-slate-900/50 to-purple-950/30 backdrop-blur-xl border-b border-purple-500/20 sticky top-0 z-40 mobile-safe-top ${isMobileView ? 'py-2' : 'py-4'}`}>
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 md:gap-4">
+                <div className="flex items-center gap-2 text-purple-200">
+                  <Users className={`${isMobileView ? 'w-3 h-3' : 'w-4 h-4'}`} />
+                  <span className={`${isMobileView ? 'text-xs' : 'text-sm'}`}>{viewerCount.toLocaleString()}</span>
                 </div>
-
-                {/* Floating Reactions - Always Show */}
-                <div className="absolute inset-0 z-20 pointer-events-none">
-                  {floatingReactions.length > 0 && (
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                      {floatingReactions.map((reaction) => (
-                        <div
-                          key={reaction.id}
-                          className="absolute animate-heart-float"
-                          style={{
-                            left: `${reaction.x}%`,
-                            top: `${reaction.y}%`,
-                            fontSize: '3rem',
-                            opacity: Math.max(0, 1 - (Date.now() - reaction.timestamp) / 10000),
-                            animationDuration: '4s',
-                            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
-                            zIndex: 30
-                          }}
-                        >
-                          {/* Instagram-style emoji with glow */}
-                          <div className="relative">
-                            <div className="absolute inset-0 blur-sm opacity-50">{reaction.emoji}</div>
-                            <div className="relative">{reaction.emoji}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Interactive Overlays from Studio */}
-                {overlayState && (
-                  <div className="absolute inset-0 z-20 pointer-events-none">
-                    <OverlayRenderer
-                      overlayState={overlayState}
-                      viewerCount={viewerCount}
-                      streamId={streamId}
-                      connected={connected}
-                      reactions={[]}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Instagram-Style Reaction Bar */}
-            <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 shadow-2xl">
-              <div className="flex items-center justify-between gap-6">
-                {/* Quick Reactions - Instagram Style */}
-                <div className="flex items-center gap-3">
-                  {[
-                    { type: 'heart', emoji: '❤️' },
-                    { type: 'laugh', emoji: '😂' },
-                    { type: 'wow', emoji: '😮' },
-                    { type: 'clap', emoji: '👏' },
-                    { type: 'fire', emoji: '🔥' },
-                    { type: 'rocket', emoji: '🚀' }
-                  ].map(({ type, emoji }) => (
-                    <motion.button
-                      key={type}
-                      onClick={() => handleReaction(type)}
-                      whileTap={{ scale: 1.4 }}
-                      whileHover={{ scale: 1.15 }}
-                      className="relative w-14 h-14 flex items-center justify-center hover:bg-purple-600/10 rounded-full transition-colors"
-                    >
-                      <span className="text-4xl filter drop-shadow-lg">
-                        {emoji}
-                      </span>
-
-                      {/* Ripple effect on click */}
-                      <motion.div
-                        className="absolute inset-0 rounded-full bg-purple-400/20"
-                        initial={{ scale: 0, opacity: 0 }}
-                        whileTap={{ scale: 2, opacity: [0, 1, 0] }}
-                        transition={{ duration: 0.5 }}
-                      />
-                    </motion.button>
-                  ))}
-                </div>
-
-                {/* Emoji Picker Button */}
-                <div className="relative" ref={emojiPickerRef}>
-                  <motion.button
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    whileTap={{ scale: 0.95 }}
-                    className="w-14 h-14 rounded-full hover:bg-purple-600/10 flex items-center justify-center transition-colors"
-                  >
-                    <motion.span
-                      className="text-3xl opacity-60 hover:opacity-100 transition-opacity"
-                      animate={{ rotate: showEmojiPicker ? 45 : 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      ➕
-                    </motion.span>
-                  </motion.button>
-
-                  {/* Emoji Picker Popup */}
-                  <AnimatePresence>
-                    {showEmojiPicker && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute bottom-full right-0 mb-4 bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-4 shadow-2xl z-50"
-                      >
-                        <div className="grid grid-cols-4 gap-2 mb-3">
-                          {[
-                            { type: 'love', emoji: '😍' },
-                            { type: 'cool', emoji: '😎' },
-                            { type: 'party', emoji: '🎉' },
-                            { type: 'mind', emoji: '🤯' },
-                            { type: 'hundred', emoji: '💯' },
-                            { type: 'star', emoji: '⭐' },
-                            { type: 'thumbs', emoji: '👍' },
-                            { type: 'sad', emoji: '😢' }
-                          ].map(({ type, emoji }) => (
-                            <motion.button
-                              key={type}
-                              onClick={() => {
-                                handleReaction(type);
-                                setShowEmojiPicker(false);
-                              }}
-                              whileTap={{ scale: 1.4 }}
-                              whileHover={{ scale: 1.15 }}
-                              className="w-12 h-12 flex items-center justify-center hover:bg-purple-600/20 rounded-lg transition-colors"
-                            >
-                              <span className="text-3xl leading-none filter drop-shadow-sm">{emoji}</span>
-                            </motion.button>
-                          ))}
-                        </div>
-                        <div className="text-center text-xs text-purple-300/70 border-t border-purple-500/20 pt-2">
-                          Tap to react instantly
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chat Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl sticky top-24 h-[calc(100vh-8rem)]">
-              {/* Chat Header */}
-              <div className="p-4 border-b border-purple-500/20">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Live Chat
-                  </h3>
-                  <div className="text-xs text-purple-300">
-                    {chatMessages.length} messages
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat Messages */}
-              <div
-                ref={chatRef}
-                className="flex-1 p-4 h-[calc(100vh-16rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-500/30"
-              >
-                <div className="space-y-3">
-                  {chatMessages.length === 0 ? (
-                    <div className="text-center text-purple-300/60 py-8">
-                      <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No messages yet. Be the first to chat!</p>
-                    </div>
-                  ) : (
-                    chatMessages.map((message) => {
-                      const displayName = message.viewer_profiles
-                        ? `${message.viewer_profiles.first_name} ${message.viewer_profiles.last_name}`
-                        : 'Anonymous Viewer';
-
-                      const messageTime = new Date(message.created_at).toLocaleTimeString();
-                      const isOwnMessage = message.sender_id === viewerId;
-
-                      return (
-                        <div
-                          key={message.id}
-                          className={`${message.is_private ? 'bg-purple-900/30 border border-purple-500/30 rounded-lg p-2' : ''}`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            {message.is_private && (
-                              <Lock className="w-3 h-3 text-purple-400" />
-                            )}
-                            <span className="text-xs font-medium text-purple-200">
-                              {displayName}
-                              {isOwnMessage && ' (You)'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {messageTime}
-                            </span>
-                            {message.is_private && (
-                              <span className="text-xs text-purple-400 font-medium">
-                                Private
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-white">{message.message}</div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Chat Input */}
-              <div className="p-4 border-t border-purple-500/20">
-                {/* Private Message Toggle */}
-                <div className="mb-2 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setIsPrivateMessage(!isPrivateMessage)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      isPrivateMessage
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-700/50 text-gray-400 hover:text-purple-300'
-                    }`}
-                  >
-                    {isPrivateMessage ? (
-                      <>
-                        <Lock className="w-3 h-3" />
-                        Private Message
-                      </>
-                    ) : (
-                      <>
-                        <Unlock className="w-3 h-3" />
-                        Public Message
-                      </>
-                    )}
-                  </button>
-                  {isPrivateMessage && (
-                    <span className="text-xs text-purple-300">
-                      Only visible to host
+                {!isMobileView && (
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
+                      connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? 'bg-yellow-400 animate-pulse' :
+                      'bg-red-400'
+                    }`}></div>
+                    <span className="text-xs text-gray-400">
+                      {connectionStatus === 'connected' ? 'Live' :
+                       connectionStatus === 'connecting' ? 'Connecting...' :
+                       connectionStatus === 'reconnecting' ? 'Reconnecting...' :
+                       'Offline'}
                     </span>
-                  )}
-                </div>
-
-                <form onSubmit={sendMessage} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder={isPrivateMessage ? "Send private message to host..." : "Type a message..."}
-                    className={`flex-1 px-3 py-2 bg-slate-700/50 border ${
-                      isPrivateMessage ? 'border-purple-400' : 'border-purple-500/30'
-                    } rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-400`}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newMessage.trim() || !connected}
-                    className={`p-2 ${
-                      isPrivateMessage
-                        ? 'bg-purple-700 hover:bg-purple-800'
-                        : connected
-                        ? 'bg-purple-600 hover:bg-purple-700'
-                        : 'bg-gray-600'
-                    } disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors`}
-                    title={!connected ? 'Connection required to send messages' : ''}
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </form>
+                  </div>
+                )}
               </div>
+
+              <h1 className={`${isMobileView ? 'text-sm' : 'text-lg'} font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent truncate max-w-[50vw]`}>
+                {streamData.events.title}
+              </h1>
+
+              {!isMobileView && (
+                <div className="flex items-center gap-2">
+                  <button className="p-2 text-purple-200 hover:text-white hover:bg-purple-600/20 rounded-lg transition-colors">
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 text-purple-200 hover:text-white hover:bg-purple-600/20 rounded-lg transition-colors">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Main Content - Mobile First */}
+        <div className="container mx-auto md:px-4 md:py-6">
+          <div className={`${isMobileView ? '' : 'grid lg:grid-cols-4 gap-6'}`}>
+            {/* Video Player - Full Width on Mobile */}
+            <div className={`${isMobileView ? '' : 'lg:col-span-3'}`}>
+              <div
+                ref={videoContainerRef}
+                className={`relative bg-black overflow-hidden ${isMobileView ? '' : 'rounded-2xl shadow-2xl'}`}
+              >
+                <div className={`${isMobileView ? 'w-full h-[56vw] max-h-[70vh]' : 'aspect-video'}`}>
+                  {streamData.mux_playback_id ? (
+                    <MuxPlayer
+                      streamType="live"
+                      playbackId={streamData.mux_playback_id}
+                      metadata={{
+                        video_id: streamData.id,
+                        video_title: streamData.events.title,
+                        viewer_user_id: 'anonymous'
+                      }}
+                      autoPlay="muted"
+                      muted={isMuted}
+                      accentColor="#9f6aff"
+                      className="w-full h-full video-mobile-optimized"
+                      style={{
+                        borderRadius: isMobileView ? '0' : '1rem',
+                        '--controls': isMobileView ? 'none' : 'auto'
+                      }}
+                      onPlay={() => console.log('Stream started playing')}
+                      onPause={() => console.log('Stream paused')}
+                      onError={(error) => console.error('Stream error:', error)}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                      <div className="text-center">
+                        <Play className="w-16 h-16 text-white/50 mx-auto mb-4" />
+                        <p className="text-white/70">Stream not available</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Floating Reactions */}
+                  <div className="absolute inset-0 z-20 pointer-events-none">
+                    {floatingReactions.length > 0 && (
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        {floatingReactions.map((reaction) => (
+                          <div
+                            key={reaction.id}
+                            className="absolute animate-heart-float"
+                            style={{
+                              left: `${reaction.x}%`,
+                              top: `${reaction.y}%`,
+                              fontSize: isMobileView ? '2.5rem' : '3rem',
+                              opacity: Math.max(0, 1 - (Date.now() - reaction.timestamp) / 10000),
+                              animationDuration: '4s',
+                              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
+                              zIndex: 30
+                            }}
+                          >
+                            <div className="relative">
+                              <div className="absolute inset-0 blur-sm opacity-50">{reaction.emoji}</div>
+                              <div className="relative">{reaction.emoji}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Interactive Overlays from Studio */}
+                  {overlayState && (
+                    <div className="absolute inset-0 z-20 pointer-events-none">
+                      <OverlayRenderer
+                        overlayState={overlayState}
+                        viewerCount={viewerCount}
+                        streamId={streamId}
+                        connected={connected}
+                        reactions={[]}
+                      />
+                    </div>
+                  )}
+
+                  {/* Mobile Controls Overlay */}
+                  {isMobileView && (
+                    <MobileControls
+                      isFullscreen={isFullscreen}
+                      isMuted={isMuted}
+                      onFullscreenToggle={toggleFullscreen}
+                      onMuteToggle={toggleMute}
+                      onChatToggle={() => setIsChatOpen(true)}
+                      networkQuality={networkQuality}
+                      className="absolute inset-0 z-30"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Touch Reactions - Mobile */}
+              {isMobileView && (
+                <TouchReactions
+                  onReaction={handleReaction}
+                  className="sticky bottom-0 z-30"
+                />
+              )}
+
+              {/* Desktop Reaction Bar */}
+              {!isMobileView && (
+                <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 shadow-2xl mt-6">
+                  <div className="flex items-center justify-center gap-3">
+                    {[
+                      { type: 'heart', emoji: '❤️' },
+                      { type: 'laugh', emoji: '😂' },
+                      { type: 'wow', emoji: '😮' },
+                      { type: 'clap', emoji: '👏' },
+                      { type: 'fire', emoji: '🔥' },
+                      { type: 'rocket', emoji: '🚀' }
+                    ].map(({ type, emoji }) => (
+                      <motion.button
+                        key={type}
+                        onClick={() => handleReaction(type)}
+                        whileTap={{ scale: 1.4 }}
+                        whileHover={{ scale: 1.15 }}
+                        className="relative w-14 h-14 flex items-center justify-center hover:bg-purple-600/10 rounded-full transition-colors"
+                      >
+                        <span className="text-4xl filter drop-shadow-lg">
+                          {emoji}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chat Sidebar - Desktop Only */}
+            {!isMobileView && (
+              <div className="lg:col-span-1">
+                <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl sticky top-24 h-[calc(100vh-8rem)] flex flex-col">
+                  <ChatContent />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Chat Bottom Sheet - Mobile Only */}
+        {isMobileView && (
+          <BottomSheet
+            defaultOpen={false}
+            peekHeight={60}
+            maxHeight={70}
+            onOpenChange={(open) => setIsChatOpen(open)}
+          >
+            <div className="flex flex-col h-full">
+              <ChatContent />
+            </div>
+          </BottomSheet>
+        )}
       </div>
 
       {/* WebSocket Debug Panel - Development Only */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === 'development' && !isMobileView && (
         <WebSocketDebugPanel
           connected={connected}
           connectionStatus={connectionStatus}

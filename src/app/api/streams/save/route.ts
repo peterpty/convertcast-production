@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
       eventDescription,
       muxStreamId,
       muxPlaybackId,
-      streamKey
+      streamKey,
+      rtmpServerUrl
     } = body;
 
     if (!eventTitle) {
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
         mux_stream_id: muxStreamId,
         mux_playback_id: muxPlaybackId,
         stream_key: streamKey,
+        rtmp_server_url: rtmpServerUrl,
         status: 'active',
         peak_viewers: 0,
         total_viewers: 0,

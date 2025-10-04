@@ -143,6 +143,11 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     stream_key: string;
   } | null>(null);
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
+  const [isRefreshingKey, setIsRefreshingKey] = useState(false);
+  const [streamCredentials, setStreamCredentials] = useState({
+    stream_key: stream.stream_key,
+    rtmp_server_url: stream.rtmp_server_url
+  });
 
   // Initialize Mux stream and get real RTMP credentials with enhanced error handling
   useEffect(() => {
@@ -577,6 +582,58 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     }
   };
 
+  // Handle stream key refresh
+  const handleRefreshStreamKey = async () => {
+    try {
+      setIsRefreshingKey(true);
+      console.log('🔄 Refreshing stream key for stream:', stream.id);
+
+      const response = await fetch('/api/mux/stream/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ streamId: stream.id })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to refresh stream key: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stream) {
+        console.log('✅ Stream key refreshed successfully');
+
+        // Update local credentials state
+        setStreamCredentials({
+          stream_key: data.stream.stream_key,
+          rtmp_server_url: data.stream.rtmp_server_url
+        });
+
+        // Track successful key refresh
+        analytics.trackEvent('stream_key_refreshed', {
+          streamId: stream.id,
+          muxStreamId: data.stream.mux_stream_id
+        });
+      } else {
+        throw new Error('Invalid response from refresh API');
+      }
+    } catch (error) {
+      console.error('❌ Failed to refresh stream key:', error);
+
+      analytics.trackError(error as Error, {
+        type: 'streaming',
+        severity: 'medium',
+        context: 'stream_key_refresh_failed',
+        streamId: stream.id
+      });
+
+      // Re-throw to allow UI to show error
+      throw error;
+    } finally {
+      setIsRefreshingKey(false);
+    }
+  };
+
   return (
     <ErrorBoundary
       showDetails={process.env.NODE_ENV === 'development'}
@@ -689,12 +746,16 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
               stream={{
                 id: stream.id,
                 mux_playback_id: muxStream?.playback_id || stream.mux_playback_id,
+                stream_key: streamCredentials.stream_key,
+                rtmp_server_url: streamCredentials.rtmp_server_url,
                 events: {
                   title: stream.events.title,
                   status: stream.events.status
                 }
               }}
               onOverlayTrigger={handleOverlayTrigger}
+              onRefreshStreamKey={handleRefreshStreamKey}
+              isRefreshingKey={isRefreshingKey}
             />
           </div>
         </div>

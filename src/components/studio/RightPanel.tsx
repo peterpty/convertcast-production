@@ -13,6 +13,7 @@ import { aiSuiteManager } from '@/lib/ai/aiSuiteManager';
 import { ViewerProfile } from '@/lib/ai/scoringEngine';
 import { RealTimeSuggestion, ScheduleRecommendation } from '@/lib/ai/insightEngine';
 import { APP_URL } from '@/constants/app';
+import { StreamCredentialsCard } from './StreamCredentialsCard';
 
 interface ChatMessage {
   id: string;
@@ -47,15 +48,19 @@ interface RightPanelProps {
   stream?: {
     id: string;
     mux_playback_id?: string | null;
+    stream_key?: string | null;
+    rtmp_server_url?: string | null;
     events?: {
       title: string;
       status: string;
     };
   };
   onOverlayTrigger?: (overlayType: string, overlayData: any) => void;
+  onRefreshStreamKey?: () => Promise<void>;
+  isRefreshingKey?: boolean;
 }
 
-export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigger }: RightPanelProps) {
+export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigger, onRefreshStreamKey, isRefreshingKey = false }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<'streaminfo' | 'chat' | 'hotleads' | 'analytics' | 'aichat' | 'offers' | 'insights' | 'scheduler'>('streaminfo');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -563,6 +568,15 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
                   {stream?.events?.title || 'Live: How to 10x Your Webinar Conversions'}
                 </div>
               </div>
+
+              {/* OBS Connection Settings - Stream Credentials */}
+              <StreamCredentialsCard
+                streamKey={stream?.stream_key || null}
+                rtmpServerUrl={stream?.rtmp_server_url || null}
+                streamId={streamId}
+                onRefreshKey={onRefreshStreamKey}
+                isRefreshing={isRefreshingKey}
+              />
 
               {/* Viewer URL Section */}
               <div className="bg-slate-800/40 border border-slate-700/30 rounded-2xl p-4">

@@ -614,7 +614,8 @@ export function StreamSetupWizard({ stream, onSetupComplete }: StreamSetupWizard
                         eventDescription: stream.events?.description || 'Live streaming event',
                         muxStreamId: muxStream?.id,
                         muxPlaybackId: muxStream?.playback_id,
-                        streamKey: streamKey
+                        streamKey: streamKey,
+                        rtmpServerUrl: rtmpServerUrl
                       })
                     });
 

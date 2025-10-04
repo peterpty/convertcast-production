@@ -255,6 +255,7 @@ export interface Database {
           mux_stream_id: string | null
           mux_playback_id: string | null
           stream_key: string | null
+          rtmp_server_url: string | null
           status: 'idle' | 'active' | 'ended'
           peak_viewers: number
           total_viewers: number
@@ -269,6 +270,7 @@ export interface Database {
           mux_stream_id?: string | null
           mux_playback_id?: string | null
           stream_key?: string | null
+          rtmp_server_url?: string | null
           status?: 'idle' | 'active' | 'ended'
           peak_viewers?: number
           total_viewers?: number
@@ -283,6 +285,7 @@ export interface Database {
           mux_stream_id?: string | null
           mux_playback_id?: string | null
           stream_key?: string | null
+          rtmp_server_url?: string | null
           status?: 'idle' | 'active' | 'ended'
           peak_viewers?: number
           total_viewers?: number

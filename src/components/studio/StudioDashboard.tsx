@@ -145,8 +145,8 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
   const [isRefreshingKey, setIsRefreshingKey] = useState(false);
   const [streamCredentials, setStreamCredentials] = useState({
-    stream_key: stream.stream_key,
-    rtmp_server_url: stream.rtmp_server_url
+    stream_key: stream.stream_key || null,
+    rtmp_server_url: stream.rtmp_server_url || 'rtmp://global-live.mux.com/app'
   });
 
   // Initialize Mux stream and get real RTMP credentials with enhanced error handling
@@ -169,26 +169,42 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
       try {
         let muxStreamData: MuxLiveStream;
 
-        // Try to get existing stream first, then create new one if needed
-        try {
-          console.log('🔍 Getting latest stream from API...');
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        // If database has stream credentials, use those instead of fetching "latest"
+        if (stream.mux_stream_id && stream.stream_key && stream.mux_playback_id) {
+          console.log('✅ Using stream from database:', stream.mux_stream_id);
+          muxStreamData = {
+            id: stream.mux_stream_id,
+            rtmp_server_url: stream.rtmp_server_url || 'rtmp://global-live.mux.com/app',
+            stream_key: stream.stream_key,
+            playback_id: stream.mux_playback_id,
+            status: 'idle',
+            max_continuous_duration: 10800,
+            created_at: stream.created_at
+          };
+        }
 
-          const response = await fetch('/api/mux/stream/latest', {
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
+        // Otherwise try to get existing stream from API
+        if (!muxStreamData) {
+          try {
+            console.log('🔍 Getting latest stream from API...');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.stream) {
-              muxStreamData = data.stream;
-              console.log('✅ Using existing stream:', muxStreamData.id);
+            const response = await fetch('/api/mux/stream/latest', {
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && data.stream) {
+                muxStreamData = data.stream;
+                console.log('✅ Using existing stream from API:', muxStreamData.id);
+              }
             }
+          } catch (error) {
+            console.log('⚠️ Could not get existing stream, will create new one');
           }
-        } catch (error) {
-          console.log('⚠️ Could not get existing stream, will create new one');
         }
 
         // Create new stream if we don't have one
@@ -242,6 +258,15 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
           stream_key: muxStreamData.stream_key
         });
 
+        // Update credentials for the credentials card
+        console.log('🔑 Updating stream credentials:', {
+          stream_key: muxStreamData.stream_key?.substring(0, 8) + '...',
+          rtmp_server_url: muxStreamData.rtmp_server_url
+        });
+        setStreamCredentials({
+          stream_key: muxStreamData.stream_key,
+          rtmp_server_url: muxStreamData.rtmp_server_url
+        });
 
         retryCount = 0; // Reset retry count on success
 
@@ -361,6 +386,12 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
               server_url: demoStream.rtmp_server_url,
               stream_key: demoStream.stream_key
             });
+
+            // Update credentials for the credentials card
+            setStreamCredentials({
+              stream_key: demoStream.stream_key,
+              rtmp_server_url: demoStream.rtmp_server_url
+            });
           }
 
           analytics.trackError(error as Error, {
@@ -384,6 +415,15 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
       }
     };
   }, [stream.id, stream.mux_stream_id, stream.events.title]);
+
+  // Debug: Log credentials when they change
+  useEffect(() => {
+    console.log('📋 Stream credentials updated:', {
+      stream_key: streamCredentials.stream_key ? streamCredentials.stream_key.substring(0, 8) + '...' : 'null',
+      rtmp_server_url: streamCredentials.rtmp_server_url || 'null',
+      hasCredentials: !!(streamCredentials.stream_key && streamCredentials.rtmp_server_url)
+    });
+  }, [streamCredentials]);
 
   // Clean up old floating reactions after 10 seconds
   useEffect(() => {

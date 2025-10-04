@@ -61,6 +61,13 @@ interface RightPanelProps {
 }
 
 export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigger, onRefreshStreamKey, isRefreshingKey = false }: RightPanelProps) {
+  // Debug: Log stream prop
+  console.log('🎛️ RightPanel stream prop:', {
+    streamId,
+    hasStream: !!stream,
+    stream_key: stream?.stream_key ? stream.stream_key.substring(0, 8) + '...' : 'NULL',
+    rtmp_server_url: stream?.rtmp_server_url || 'NULL'
+  });
   const [activeTab, setActiveTab] = useState<'streaminfo' | 'chat' | 'hotleads' | 'analytics' | 'aichat' | 'offers' | 'insights' | 'scheduler'>('streaminfo');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);

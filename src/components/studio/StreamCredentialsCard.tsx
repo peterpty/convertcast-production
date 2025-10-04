@@ -38,6 +38,15 @@ export function StreamCredentialsCard({
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
+  // Debug: Log props when they change
+  console.log('🔐 StreamCredentialsCard props:', {
+    streamKey: streamKey ? streamKey.substring(0, 8) + '...' : 'NULL',
+    rtmpServerUrl: rtmpServerUrl || 'NULL',
+    streamId,
+    hasStreamKey: !!streamKey,
+    hasRtmpUrl: !!rtmpServerUrl
+  });
+
   const handleCopyKey = async () => {
     if (!streamKey) return;
     await navigator.clipboard.writeText(streamKey);
@@ -65,6 +74,16 @@ export function StreamCredentialsCard({
   };
 
   const hasCredentials = streamKey && rtmpServerUrl;
+
+  console.log('🔐 StreamCredentialsCard hasCredentials check:', {
+    hasCredentials: !!hasCredentials,
+    streamKeyCheck: !!streamKey,
+    rtmpServerUrlCheck: !!rtmpServerUrl,
+    streamKeyType: typeof streamKey,
+    rtmpServerUrlType: typeof rtmpServerUrl,
+    streamKeyValue: streamKey,
+    rtmpServerUrlValue: rtmpServerUrl
+  });
 
   return (
     <div className="bg-slate-800/40 border border-slate-700/30 rounded-2xl p-4">

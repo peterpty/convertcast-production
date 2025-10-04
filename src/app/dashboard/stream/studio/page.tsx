@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { StudioDashboard } from '@/components/studio/StudioDashboard';
-import { StreamSetupWizard } from '@/components/studio/StreamSetupWizard';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/database';
@@ -14,69 +13,26 @@ export default function StreamStudioPage() {
   const [activeStream, setActiveStream] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [setupComplete, setSetupComplete] = useState(false);
 
-  useEffect(() => {
-    async function loadActiveStream() {
-      try {
-        // Check if we're in mock/development/test mode
-        const isMockMode = process.env.NODE_ENV === 'development' ||
-                          process.env.NODE_ENV === 'test' ||
-                          process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('mock') ||
-                          process.env.MOCK_DATABASE === 'true' ||
-                          process.env.ENABLE_MOCK_FEATURES === 'true';
+  // Function to load stream (extracted so we can call it after setup)
+  // If streamId is provided, load that specific stream. Otherwise, load latest active stream.
+  async function loadActiveStream(streamId?: string) {
+    try {
+      setLoading(true);
 
-        if (isMockMode) {
-          // Create demo stream immediately for development
-          setActiveStream({
-            peak_viewers: 2000,
-            total_viewers: 5000,
-            id: 'demo-stream-id',
-            stream_key: 'demo-stream-key',
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            event_id: 'demo-event-id',
-            mux_stream_id: null,
-            mux_playback_id: null,
-            viewer_count: 1847,
-            engagemax_config: {
-              polls_enabled: true,
-              quizzes_enabled: true,
-              reactions_enabled: true,
-              ctas_enabled: true
-            },
-            autooffer_config: {
-              experiments_enabled: true,
-              dynamic_pricing: true,
-              behavioral_triggers: true
-            },
-            chat_config: {
-              enabled: true,
-              moderated: false,
-              ai_responses: true
-            },
-            events: {
-              id: 'demo-event-id',
-              title: 'Live: How to 10x Your Webinar Conversions',
-              description: 'Complete ConvertCast Studio demo featuring all 6 AI-powered features working in real-time',
-              scheduled_start: new Date().toISOString(),
-              scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-              status: 'live'
-            } as Event
-          } as Stream & { events: Event });
-          setLoading(false);
-          return;
-        }
+      console.log('🔄 loadActiveStream called with streamId:', streamId);
 
-        // Production code: Get the user's most recent active or live stream
+      // ALWAYS USE REAL MUX STREAMS (MOCK MODE DISABLED FOR PRODUCTION TESTING)
+      console.log('✅ Using REAL Mux streams (mock mode disabled)');
+
+      // Get the user's stream
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
           throw new Error('User not authenticated');
         }
 
-        const { data: stream, error: streamError } = await supabase
+        let query = supabase
           .from('streams')
           .select(`
             *,
@@ -90,34 +46,58 @@ export default function StreamStudioPage() {
               user_id
             )
           `)
-          .eq('events.user_id', user.id)
-          .in('status', ['active', 'live'])
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .eq('events.user_id', user.id);
+
+        // If specific stream ID provided, query for that stream. Otherwise, get most recent active/live stream.
+        if (streamId) {
+          console.log('🎯 Loading specific stream by ID:', streamId);
+          query = query.eq('id', streamId);
+        } else {
+          console.log('📋 Loading most recent active/live stream');
+          query = query
+            .in('status', ['active', 'live'])
+            .order('created_at', { ascending: false })
+            .limit(1);
+        }
+
+        const { data: stream, error: streamError } = await query.single();
 
         if (streamError && streamError.code !== 'PGRST116') {
           throw streamError;
         }
 
         if (!stream) {
-          // No stream found - create a draft stream for setup wizard
-          const { data: user } = await supabase.auth.getUser();
+          // NO STREAM IN DATABASE - LOAD LATEST FROM MUX (DON'T CREATE NEW!)
+          console.log('🔍 No stream in database. Loading LATEST from Mux...');
 
-          // Create a draft stream object for the setup wizard
+          // Get LATEST Mux stream (the one you're already using!)
+          const muxLatestResponse = await fetch('/api/mux/stream/latest');
+
+          if (!muxLatestResponse.ok) {
+            throw new Error('Failed to load Mux stream');
+          }
+
+          const muxLatestData = await muxLatestResponse.json();
+          const existingStream = muxLatestData.stream;
+
+          console.log('✅ Using EXISTING Mux stream:', existingStream.id);
+          console.log('🔑 Stream key:', existingStream.stream_key);
+          console.log('📊 Real Mux status:', existingStream.status);
+
+          // Format Mux data - USE REAL STATUS FROM MUX
           setActiveStream({
-            peak_viewers: 0,
-            total_viewers: 0,
-            id: 'new-stream-' + Date.now(),
-            stream_key: null,
-            status: 'draft',
+            id: existingStream.id,
+            mux_stream_id: existingStream.id,
+            mux_playback_id: existingStream.playback_id,
+            stream_key: existingStream.stream_key,
+            rtmp_server_url: existingStream.rtmp_server_url,
+            status: existingStream.status || 'idle', // ← USE REAL STATUS FROM MUX
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            event_id: 'new-event-' + Date.now(),
-            mux_stream_id: null,
-            mux_playback_id: null,
+            event_id: 'mux-direct-event',
+            peak_viewers: 0,
+            total_viewers: 0,
             viewer_count: 0,
-            user_id: user.user?.id || null,
             engagemax_config: {
               polls_enabled: true,
               quizzes_enabled: true,
@@ -135,15 +115,15 @@ export default function StreamStudioPage() {
               ai_responses: true
             },
             events: {
-              id: 'new-event-' + Date.now(),
-              title: 'My Live Stream',
-              description: 'Create your first live streaming event with ConvertCast',
+              id: 'mux-direct-event',
+              title: 'Live: How to 10x Your Webinar Conversions',
+              description: 'AI-powered live streaming event',
               scheduled_start: new Date().toISOString(),
               scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-              status: 'draft',
-              user_id: user.user?.id || null
+              status: existingStream.status === 'active' ? 'live' : 'scheduled'
             } as Event
           } as Stream & { events: Event });
+
           setLoading(false);
           return;
         }
@@ -151,60 +131,13 @@ export default function StreamStudioPage() {
         setActiveStream(stream as Stream & { events: Event });
       } catch (err) {
         console.error('Failed to load stream:', err);
-
-        // Fallback to demo stream even on error in development/test
-        const isMockMode = process.env.NODE_ENV === 'development' ||
-                          process.env.NODE_ENV === 'test' ||
-                          process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('mock') ||
-                          process.env.MOCK_DATABASE === 'true' ||
-                          process.env.ENABLE_MOCK_FEATURES === 'true';
-
-        if (isMockMode) {
-          setActiveStream({
-            peak_viewers: 2000,
-            total_viewers: 5000,
-            id: 'demo-stream-id',
-            stream_key: 'demo-stream-key',
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            event_id: 'demo-event-id',
-            mux_stream_id: null,
-            mux_playback_id: null,
-            viewer_count: 1847,
-            engagemax_config: {
-              polls_enabled: true,
-              quizzes_enabled: true,
-              reactions_enabled: true,
-              ctas_enabled: true
-            },
-            autooffer_config: {
-              experiments_enabled: true,
-              dynamic_pricing: true,
-              behavioral_triggers: true
-            },
-            chat_config: {
-              enabled: true,
-              moderated: false,
-              ai_responses: true
-            },
-            events: {
-              id: 'demo-event-id',
-              title: 'Live: How to 10x Your Webinar Conversions',
-              description: 'Complete ConvertCast Studio demo featuring all 6 AI-powered features',
-              scheduled_start: new Date().toISOString(),
-              scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-              status: 'live'
-            } as Event
-          } as Stream & { events: Event });
-        } else {
-          setError('Failed to load streaming studio');
-        }
-      } finally {
+        setError('Failed to load streaming studio');
+      } finally{
         setLoading(false);
       }
     }
 
+  useEffect(() => {
     loadActiveStream();
   }, []);
 
@@ -256,13 +189,7 @@ export default function StreamStudioPage() {
     );
   }
 
-  // Determine if setup is needed (check if stream has been configured)
-  const needsSetup = !setupComplete && (!activeStream?.mux_stream_id || activeStream?.status === 'draft');
-
-  if (needsSetup) {
-    return <StreamSetupWizard stream={activeStream} onSetupComplete={() => setSetupComplete(true)} />;
-  }
-
+  // NO WIZARD - Always show studio (stream is created immediately on page load)
   return (
     <DashboardLayout
       title="Streaming Studio"

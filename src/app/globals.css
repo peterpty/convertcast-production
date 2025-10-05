@@ -55,4 +55,92 @@
       zoom: 0.9;
     }
   }
+
+  /* ========================================
+     MOBILE VIEWER OPTIMIZATIONS
+     Instagram Live Style
+     ======================================== */
+
+  /* Floating Comments Fade Effect */
+  .floating-comments-fade {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.3) 15%,
+      rgba(0, 0, 0, 0.7) 30%,
+      black 50%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.3) 15%,
+      rgba(0, 0, 0, 0.7) 30%,
+      black 50%
+    );
+  }
+
+  /* iOS Safe Area Insets */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .mt-safe {
+    margin-top: env(safe-area-inset-top);
+  }
+
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Portrait Mode Optimizations */
+  @media (orientation: portrait) {
+    .floating-comments {
+      max-height: 40vh;
+      bottom: 80px;
+    }
+
+    .instagram-bar-portrait {
+      height: 60px;
+      padding: 0.75rem 1rem;
+    }
+  }
+
+  /* Landscape Mode Optimizations */
+  @media (orientation: landscape) {
+    .floating-comments {
+      max-height: 25vh;
+      bottom: 64px;
+      max-width: 60vw;
+    }
+
+    .instagram-bar-landscape {
+      height: 48px;
+      padding: 0.5rem 1rem;
+    }
+  }
+
+  /* Glass Morphism Effects */
+  .glass-effect {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+  }
+
+  .glass-effect-light {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+  }
 }

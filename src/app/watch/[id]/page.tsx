@@ -11,10 +11,12 @@ import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
 import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
-import { BottomSheet } from '@/components/viewer/BottomSheet';
+import { InstagramBar } from '@/components/viewer/InstagramBar';
+import { FloatingComments, type FloatingComment } from '@/components/viewer/FloatingComments';
 import { TouchReactions } from '@/components/viewer/TouchReactions';
 import { MobileControls } from '@/components/viewer/MobileControls';
 import { useOrientation } from '@/hooks/useOrientation';
+import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
 import '@/styles/instagram-overlays.css';
 import {
   Users,
@@ -59,6 +61,7 @@ export default function LiveViewerPage() {
   const chatRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const orientation = useOrientation();
+  const keyboardState = useKeyboardDetection();
 
   // Generate a unique viewer ID for this session
   const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
@@ -831,18 +834,60 @@ export default function LiveViewerPage() {
           </div>
         </div>
 
-        {/* Chat Bottom Sheet - Mobile Only */}
+        {/* Floating Comments - Mobile Only */}
         {isMobileView && (
-          <BottomSheet
-            defaultOpen={false}
-            peekHeight={60}
-            maxHeight={70}
-            onOpenChange={(open) => setIsChatOpen(open)}
-          >
-            <div className="flex flex-col h-full">
-              <ChatContent />
-            </div>
-          </BottomSheet>
+          <FloatingComments
+            messages={chatMessages.slice(-10).map((msg): FloatingComment => ({
+              id: msg.id,
+              username: msg.viewer_profiles
+                ? `${msg.viewer_profiles.first_name} ${msg.viewer_profiles.last_name}`
+                : 'Anonymous',
+              message: msg.message,
+              isPrivate: msg.is_private,
+              timestamp: new Date(msg.created_at).getTime(),
+            }))}
+            onCommentClick={() => {
+              // TODO: Open full chat modal
+              setIsChatOpen(true);
+            }}
+            keyboardHeight={keyboardState.height}
+          />
+        )}
+
+        {/* Instagram Bar - Mobile Only */}
+        {isMobileView && (
+          <InstagramBar
+            onSendMessage={(message, isPrivate) => {
+              if (connected) {
+                sendChatMessage(message, viewerId, isPrivate);
+              }
+            }}
+            onReaction={() => {
+              handleReaction('heart');
+            }}
+            onShare={async () => {
+              if (navigator.share && streamData) {
+                try {
+                  await navigator.share({
+                    title: streamData.events.title,
+                    text: `Watch ${streamData.events.title} live!`,
+                    url: window.location.href,
+                  });
+                } catch (err) {
+                  // User cancelled or share failed
+                  console.log('Share cancelled');
+                }
+              } else {
+                // Fallback: Copy to clipboard
+                navigator.clipboard?.writeText(window.location.href);
+              }
+            }}
+            onMoreMenu={() => {
+              // TODO: Open more menu
+              console.log('Open more menu');
+            }}
+            connected={connected}
+          />
         )}
       </div>
 

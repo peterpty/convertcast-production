@@ -19,6 +19,7 @@ import { RotateScreen } from '@/components/viewer/RotateScreen';
 import { useOrientation } from '@/hooks/useOrientation';
 import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
 import { useLandscapeLock } from '@/hooks/useLandscapeLock';
+import { useMobileDetection } from '@/hooks/useMobileDetection';
 import '@/styles/instagram-overlays.css';
 import {
   Users,
@@ -66,6 +67,7 @@ export default function LiveViewerPage() {
   const orientation = useOrientation();
   const keyboardState = useKeyboardDetection();
   const landscapeLock = useLandscapeLock();
+  const { isMobile: isMobileDevice } = useMobileDetection();
 
   // Generate a unique viewer ID for this session
   const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
@@ -91,20 +93,12 @@ export default function LiveViewerPage() {
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
 
   // Mobile-specific state
-  const [isMobileView, setIsMobileView] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(false); // Start unmuted
 
-  // Detect mobile view
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // Use robust mobile detection that survives rotation
+  const isMobileView = isMobileDevice;
 
   // Lock body scroll on mobile landscape for immersive experience
   useEffect(() => {
@@ -758,7 +752,7 @@ export default function LiveViewerPage() {
       isStudio={false}
     >
       {/* Landscape Lock: Show rotate prompt on mobile in portrait mode */}
-      {isMobileView && <RotateScreen />}
+      {isMobileDevice && <RotateScreen />}
 
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950">
         {/* Header - Hidden on Mobile Landscape for Immersive View */}

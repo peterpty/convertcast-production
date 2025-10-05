@@ -678,57 +678,6 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
                 </div>
               </div>
 
-              {/* Test Overlays */}
-              <div className="bg-slate-800/40 border border-slate-700/30 rounded-2xl p-4">
-                <div className="text-gray-400 text-sm font-medium mb-3">Test Overlays</div>
-                <div className="grid grid-cols-1 gap-2">
-                  <button
-                    onClick={() => handleTriggerOverlay('show-poll', {
-                      poll: {
-                        id: 'test-poll',
-                        question: 'Which feature interests you most?',
-                        options: [
-                          { id: 'opt1', text: 'Live AI Chat', votes: 0 },
-                          { id: 'opt2', text: 'Auto Offers', votes: 0 },
-                          { id: 'opt3', text: 'Smart Analytics', votes: 0 }
-                        ],
-                        totalVotes: 0,
-                        active: true
-                      }
-                    })}
-                    className="flex items-center gap-3 px-3 py-2 bg-blue-700/40 hover:bg-blue-700 border border-blue-600/40 hover:border-blue-600 text-blue-200 hover:text-white rounded-lg text-sm transition-all duration-200"
-                  >
-                    <span>📊</span>
-                    <span>Show Test Poll</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleTriggerOverlay('show-auto-offer', {
-                      trigger: { id: 'test-offer' },
-                      template: {
-                        name: 'Limited Time Special',
-                        headline: 'Get 50% off our premium package!',
-                        pricing: { originalPrice: 299, offerPrice: 149 }
-                      }
-                    })}
-                    className="flex items-center gap-3 px-3 py-2 bg-green-700/40 hover:bg-green-700 border border-green-600/40 hover:border-green-600 text-green-200 hover:text-white rounded-lg text-sm transition-all duration-200"
-                  >
-                    <span>💰</span>
-                    <span>Show Test Offer</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      handleTriggerOverlay('hide-poll', {});
-                      handleTriggerOverlay('hide-offer', {});
-                    }}
-                    className="flex items-center gap-3 px-3 py-2 bg-red-700/40 hover:bg-red-700 border border-red-600/40 hover:border-red-600 text-red-200 hover:text-white rounded-lg text-sm transition-all duration-200"
-                  >
-                    <span>❌</span>
-                    <span>Hide All Overlays</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         )}

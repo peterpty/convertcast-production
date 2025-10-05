@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   viewport: {
     width: 'device-width',
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    // Force landscape orientation hint
+    maximumScale: 5, // Allow zoom out to see full video
+    minimumScale: 1,
+    userScalable: true, // Allow user to zoom if needed
     viewportFit: 'cover',
   },
   appleWebApp: {

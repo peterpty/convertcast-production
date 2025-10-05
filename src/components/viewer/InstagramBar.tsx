@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Lock, Unlock, Share2, MoreVertical, Send } from 'lucide-react';
 import { useOrientation } from '@/hooks/useOrientation';
+import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
 
 export interface InstagramBarProps {
   onSendMessage: (message: string, isPrivate: boolean) => void;
@@ -25,8 +26,12 @@ export function InstagramBar({
   const [message, setMessage] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const orientation = useOrientation();
+  const keyboardState = useKeyboardDetection();
 
   const isLandscape = orientation.isLandscape;
+
+  // Calculate bottom position based on keyboard
+  const bottomPosition = keyboardState.isOpen ? keyboardState.height : 0;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -62,19 +67,22 @@ export function InstagramBar({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-50 pb-safe
+      className={`fixed left-0 right-0 z-50 pb-safe transition-all duration-200
         bg-gradient-to-t from-black/95 via-black/80 to-transparent
         backdrop-blur-2xl border-t border-white/10
         ${isLandscape ? 'instagram-bar-landscape' : 'instagram-bar-portrait'}
         ${className}`}
+      style={{
+        bottom: `${bottomPosition}px`,
+      }}
     >
       <form
         onSubmit={handleSubmit}
         className={`flex items-center gap-2 ${
-          isLandscape ? 'px-4 py-2' : 'px-4 py-2.5'
+          isLandscape ? 'px-3 py-2' : 'px-4 py-2.5'
         }`}
       >
-        {/* Main Input */}
+        {/* Main Input with inline send button */}
         <div className="flex-1 relative">
           <input
             type="text"
@@ -82,108 +90,80 @@ export function InstagramBar({
             onChange={(e) => setMessage(e.target.value)}
             placeholder={isPrivate ? "Private message..." : "Add a comment..."}
             disabled={!connected}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="sentences"
             className={`w-full bg-white/10 backdrop-blur-md
               border ${isPrivate ? 'border-purple-400/60' : 'border-white/20'}
               rounded-full
-              ${isLandscape ? 'px-3 py-2 pr-8 text-xs' : 'px-4 py-2.5 pr-10 text-sm'}
+              ${isLandscape ? 'pl-3 pr-12 py-2 text-sm' : 'pl-4 pr-14 py-3 text-base'}
               text-white placeholder-white/60
               focus:bg-white/15 focus:border-white/30
               ${isPrivate ? 'focus:border-purple-400' : ''}
               disabled:opacity-50 disabled:cursor-not-allowed
               transition-all duration-200 outline-none`}
+            style={{
+              fontSize: isLandscape ? '14px' : '16px', // Prevent iOS zoom on focus
+            }}
           />
 
-          {/* Send button (shows when typing) */}
-          <AnimatePresence>
-            {message.trim() && (
-              <motion.button
-                type="submit"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
-                disabled={!connected}
-                className={`absolute ${isLandscape ? 'right-1.5' : 'right-2'} top-1/2 -translate-y-1/2
-                  ${isLandscape ? 'w-6 h-6' : 'w-7 h-7'} rounded-full
-                  ${isPrivate ? 'bg-purple-500' : 'bg-purple-600'}
-                  hover:bg-purple-700
-                  disabled:bg-gray-600 disabled:cursor-not-allowed
-                  flex items-center justify-center
-                  active:scale-95 transition-all`}
-              >
-                <Send className={`${isLandscape ? 'w-3 h-3' : 'w-4 h-4'} text-white`} />
-              </motion.button>
-            )}
-          </AnimatePresence>
+          {/* Send button - ALWAYS visible, larger hit target */}
+          <button
+            type="submit"
+            disabled={!connected || !message.trim()}
+            className={`absolute ${isLandscape ? 'right-1' : 'right-1.5'} top-1/2 -translate-y-1/2
+              ${isLandscape ? 'w-8 h-8' : 'w-10 h-10'} rounded-full
+              ${message.trim() && connected
+                ? isPrivate ? 'bg-purple-500 hover:bg-purple-600' : 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-gray-700/50'}
+              disabled:opacity-50 disabled:cursor-not-allowed
+              flex items-center justify-center
+              active:scale-95 transition-all shadow-lg`}
+          >
+            <Send className={`${isLandscape ? 'w-4 h-4' : 'w-5 h-5'} ${message.trim() && connected ? 'text-white' : 'text-gray-400'}`} />
+          </button>
         </div>
 
-        {/* Reaction Button */}
-        <motion.button
-          type="button"
-          onClick={handleReaction}
-          whileTap={{ scale: 0.9 }}
-          className={`${buttonSize} rounded-full
-            bg-white/10 backdrop-blur-md border border-white/10
-            flex items-center justify-center
-            hover:bg-white/15 active:bg-white/20
-            transition-colors`}
-          aria-label="Send reaction"
-        >
-          <Heart className={`${iconSize} text-white`} />
-        </motion.button>
+        {/* Compact action buttons - smaller in landscape */}
+        <div className="flex items-center gap-1.5">
+          {/* Private Message Toggle */}
+          <motion.button
+            type="button"
+            onClick={handleTogglePrivate}
+            whileTap={{ scale: 0.9 }}
+            className={`${isLandscape ? 'w-8 h-8' : 'w-10 h-10'} rounded-full
+              backdrop-blur-md border
+              flex items-center justify-center
+              transition-all shrink-0
+              ${
+                isPrivate
+                  ? 'bg-purple-500 border-purple-400'
+                  : 'bg-white/10 border-white/10 hover:bg-white/15'
+              }`}
+            aria-label={isPrivate ? 'Switch to public' : 'Switch to private'}
+          >
+            {isPrivate ? (
+              <Lock className={`${isLandscape ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-white`} />
+            ) : (
+              <Unlock className={`${isLandscape ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-white`} />
+            )}
+          </motion.button>
 
-        {/* Private Message Toggle */}
-        <motion.button
-          type="button"
-          onClick={handleTogglePrivate}
-          whileTap={{ scale: 0.9 }}
-          className={`${buttonSize} rounded-full
-            backdrop-blur-md border
-            flex items-center justify-center
-            transition-all
-            ${
-              isPrivate
-                ? 'bg-purple-500 border-purple-400'
-                : 'bg-white/10 border-white/10 hover:bg-white/15'
-            }`}
-          aria-label={isPrivate ? 'Switch to public' : 'Switch to private'}
-        >
-          {isPrivate ? (
-            <Lock className={`${iconSize} text-white`} />
-          ) : (
-            <Unlock className={`${iconSize} text-white`} />
-          )}
-        </motion.button>
-
-        {/* Share Button */}
-        <motion.button
-          type="button"
-          onClick={handleShare}
-          whileTap={{ scale: 0.9 }}
-          className={`${buttonSize} rounded-full
-            bg-white/10 backdrop-blur-md border border-white/10
-            flex items-center justify-center
-            hover:bg-white/15 active:bg-white/20
-            transition-colors`}
-          aria-label="Share stream"
-        >
-          <Share2 className={`${iconSize} text-white`} />
-        </motion.button>
-
-        {/* More Menu Button */}
-        <motion.button
-          type="button"
-          onClick={handleMoreMenu}
-          whileTap={{ scale: 0.9 }}
-          className={`${buttonSize} rounded-full
-            bg-white/10 backdrop-blur-md border border-white/10
-            flex items-center justify-center
-            hover:bg-white/15 active:bg-white/20
-            transition-colors`}
-          aria-label="More options"
-        >
-          <MoreVertical className={`${iconSize} text-white`} />
-        </motion.button>
+          {/* Reaction Button */}
+          <motion.button
+            type="button"
+            onClick={handleReaction}
+            whileTap={{ scale: 0.9 }}
+            className={`${isLandscape ? 'w-8 h-8' : 'w-10 h-10'} rounded-full
+              bg-white/10 backdrop-blur-md border border-white/10
+              flex items-center justify-center shrink-0
+              hover:bg-white/15 active:bg-white/20
+              transition-colors`}
+            aria-label="Send reaction"
+          >
+            <Heart className={`${isLandscape ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-white`} />
+          </motion.button>
+        </div>
       </form>
 
       {/* Private Message Indicator */}

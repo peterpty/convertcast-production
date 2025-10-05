@@ -841,7 +841,7 @@ export default function LiveViewerPage() {
                       style={{
                         borderRadius: isMobileView && orientation.isLandscape ? '0' : isMobileView ? '0' : '1rem',
                         '--controls': isMobileView ? 'none' : 'auto',
-                        '--media-object-fit': isMobileView && orientation.isLandscape ? 'cover' : 'contain',
+                        '--media-object-fit': 'contain', // Always contain to show full video
                         '--seek-backward-button': 'none',
                         '--seek-forward-button': 'none',
                         '--time-range': isMobileView ? 'none' : 'auto',
@@ -902,8 +902,8 @@ export default function LiveViewerPage() {
                     </div>
                   )}
 
-                  {/* Mobile Controls Overlay */}
-                  {isMobileView && (
+                  {/* Mobile Controls Overlay - Only show in portrait, not landscape (already fullscreen) */}
+                  {isMobileView && !orientation.isLandscape && (
                     <MobileControls
                       isFullscreen={isFullscreen}
                       isMuted={isMuted}

@@ -15,8 +15,10 @@ import { InstagramBar } from '@/components/viewer/InstagramBar';
 import { FloatingComments, type FloatingComment } from '@/components/viewer/FloatingComments';
 import { TouchReactions } from '@/components/viewer/TouchReactions';
 import { MobileControls } from '@/components/viewer/MobileControls';
+import { RotateScreen } from '@/components/viewer/RotateScreen';
 import { useOrientation } from '@/hooks/useOrientation';
 import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
+import { useLandscapeLock } from '@/hooks/useLandscapeLock';
 import '@/styles/instagram-overlays.css';
 import {
   Users,
@@ -60,8 +62,10 @@ export default function LiveViewerPage() {
   const streamId = params.id as string;
   const chatRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
+  const muxPlayerRef = useRef<any>(null);
   const orientation = useOrientation();
   const keyboardState = useKeyboardDetection();
+  const landscapeLock = useLandscapeLock();
 
   // Generate a unique viewer ID for this session
   const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
@@ -101,6 +105,114 @@ export default function LiveViewerPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Lock body scroll on mobile landscape for immersive experience
+  useEffect(() => {
+    if (isMobileView && orientation.isLandscape) {
+      document.body.classList.add('mobile-landscape-lock');
+    } else {
+      document.body.classList.remove('mobile-landscape-lock');
+    }
+
+    return () => {
+      document.body.classList.remove('mobile-landscape-lock');
+    };
+  }, [isMobileView, orientation.isLandscape]);
+
+  // LIVE-LOCK: Force player to always stay at live edge, prevent seeking
+  useEffect(() => {
+    const player = muxPlayerRef.current;
+    if (!player) return;
+
+    let lastLivePosition = 0;
+
+    // Monitor and enforce live position
+    const enforceLivePosition = () => {
+      try {
+        const mediaEl = player.media;
+        if (!mediaEl) return;
+
+        // For live streams, duration - currentTime = latency from live edge
+        const latencyFromLive = mediaEl.duration - mediaEl.currentTime;
+
+        // If viewer has drifted more than 3 seconds from live, snap back
+        if (latencyFromLive > 3) {
+          console.log('🔒 Live-lock: Snapping back to live edge (drift:', latencyFromLive.toFixed(2), 's)');
+          mediaEl.currentTime = mediaEl.duration;
+        }
+
+        lastLivePosition = mediaEl.currentTime;
+      } catch (err) {
+        // Silently handle errors
+      }
+    };
+
+    // Check live position every second
+    const interval = setInterval(enforceLivePosition, 1000);
+
+    // Block seek attempts via timeupdate
+    const preventSeekBack = (e: Event) => {
+      try {
+        const mediaEl = player.media;
+        if (!mediaEl) return;
+
+        const currentTime = mediaEl.currentTime;
+
+        // If user seeked backward (more than 1 second), snap to live
+        if (lastLivePosition - currentTime > 1) {
+          console.log('🔒 Live-lock: Blocked seek attempt');
+          mediaEl.currentTime = mediaEl.duration;
+
+          // Haptic feedback to indicate blocking
+          if (navigator.vibrate) {
+            navigator.vibrate([50, 50, 50]);
+          }
+        }
+
+        lastLivePosition = currentTime;
+      } catch (err) {
+        // Silently handle errors
+      }
+    };
+
+    // Block keyboard seeking
+    const preventKeyboardSeek = (e: KeyboardEvent) => {
+      const seekKeys = ['ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+
+      if (seekKeys.includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('🔒 Live-lock: Blocked keyboard seek:', e.key);
+
+        // Visual feedback
+        if (navigator.vibrate) {
+          navigator.vibrate(30);
+        }
+      }
+    };
+
+    // Attach listeners
+    if (player.media) {
+      player.media.addEventListener('timeupdate', preventSeekBack);
+      player.media.addEventListener('seeking', (e: Event) => {
+        e.preventDefault();
+        if (player.media) {
+          player.media.currentTime = player.media.duration;
+        }
+      });
+    }
+
+    document.addEventListener('keydown', preventKeyboardSeek);
+
+    return () => {
+      clearInterval(interval);
+      if (player.media) {
+        player.media.removeEventListener('timeupdate', preventSeekBack);
+      }
+      document.removeEventListener('keydown', preventKeyboardSeek);
+    };
+  }, [muxPlayerRef.current]);
 
   // Transform WebSocket overlay data to OverlayState format
   const overlayState = overlayData ? {
@@ -645,9 +757,12 @@ export default function LiveViewerPage() {
       error={websocketError}
       isStudio={false}
     >
+      {/* Landscape Lock: Show rotate prompt on mobile in portrait mode */}
+      {isMobileView && <RotateScreen />}
+
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950">
-        {/* Header - Minimal on Mobile */}
-        <div className={`bg-gradient-to-r from-slate-900/50 to-purple-950/30 backdrop-blur-xl border-b border-purple-500/20 sticky top-0 z-40 mobile-safe-top ${isMobileView ? 'py-2' : 'py-4'}`}>
+        {/* Header - Hidden on Mobile Landscape for Immersive View */}
+        <div className={`bg-gradient-to-r from-slate-900/50 to-purple-950/30 backdrop-blur-xl border-b border-purple-500/20 sticky top-0 z-40 mobile-safe-top ${isMobileView ? 'py-2' : 'py-4'} ${isMobileView && orientation.isLandscape ? 'mobile-landscape-hide' : ''}`}>
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 md:gap-4">
@@ -691,19 +806,33 @@ export default function LiveViewerPage() {
         </div>
 
         {/* Main Content - Mobile First */}
-        <div className="container mx-auto md:px-4 md:py-6">
+        <div className={`${isMobileView && orientation.isLandscape ? '' : 'container mx-auto md:px-4 md:py-6'}`}>
           <div className={`${isMobileView ? '' : 'grid lg:grid-cols-4 gap-6'}`}>
-            {/* Video Player - Full Width on Mobile */}
+            {/* Video Player - Fullscreen on Mobile Landscape */}
             <div className={`${isMobileView ? '' : 'lg:col-span-3'}`}>
               <div
                 ref={videoContainerRef}
-                className={`relative bg-black overflow-hidden ${isMobileView ? '' : 'rounded-2xl shadow-2xl'}`}
+                className={`relative bg-black overflow-hidden ${
+                  isMobileView && orientation.isLandscape
+                    ? 'video-immersive-container'
+                    : isMobileView
+                    ? ''
+                    : 'rounded-2xl shadow-2xl'
+                }`}
               >
-                <div className={`${isMobileView ? 'w-full h-[56vw] max-h-[70vh]' : 'aspect-video'}`}>
+                <div className={`${
+                  isMobileView && orientation.isLandscape
+                    ? 'w-full h-full'
+                    : isMobileView
+                    ? 'w-full h-[56vw] max-h-[70vh]'
+                    : 'aspect-video'
+                }`}>
                   {streamData.mux_playback_id ? (
                     <MuxPlayer
+                      ref={muxPlayerRef}
                       streamType="live"
                       playbackId={streamData.mux_playback_id}
+                      targetLiveWindow={0}
                       metadata={{
                         video_id: streamData.id,
                         video_title: streamData.events.title,
@@ -712,10 +841,18 @@ export default function LiveViewerPage() {
                       autoPlay="muted"
                       muted={isMuted}
                       accentColor="#9f6aff"
-                      className="w-full h-full video-mobile-optimized"
+                      primaryColor="#9f6aff"
+                      secondaryColor="#a855f7"
+                      className="w-full h-full video-mobile-optimized live-locked-player"
                       style={{
-                        borderRadius: isMobileView ? '0' : '1rem',
-                        '--controls': isMobileView ? 'none' : 'auto'
+                        borderRadius: isMobileView && orientation.isLandscape ? '0' : isMobileView ? '0' : '1rem',
+                        '--controls': isMobileView ? 'none' : 'auto',
+                        '--media-object-fit': isMobileView && orientation.isLandscape ? 'cover' : 'contain',
+                        '--seek-backward-button': 'none',
+                        '--seek-forward-button': 'none',
+                        '--time-range': isMobileView ? 'none' : 'auto',
+                        width: '100%',
+                        height: '100%',
                       }}
                       onPlay={() => console.log('Stream started playing')}
                       onPause={() => console.log('Stream paused')}
@@ -786,8 +923,8 @@ export default function LiveViewerPage() {
                 </div>
               </div>
 
-              {/* Touch Reactions - Mobile */}
-              {isMobileView && (
+              {/* Touch Reactions - Mobile Portrait Only (hidden in landscape for immersive view) */}
+              {isMobileView && !orientation.isLandscape && (
                 <TouchReactions
                   onReaction={handleReaction}
                   className="sticky bottom-0 z-30"

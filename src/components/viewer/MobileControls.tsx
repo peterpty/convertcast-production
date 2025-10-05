@@ -114,7 +114,7 @@ export function MobileControls({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
-              className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm z-10"
+              className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm z-[60] safe-area-top"
             >
               <div className="flex items-center justify-between">
                 {/* Network Quality Indicator */}
@@ -137,7 +137,7 @@ export function MobileControls({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent backdrop-blur-sm z-10"
+              className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent backdrop-blur-sm z-[60] safe-area-bottom"
             >
               <div className="flex items-center justify-between">
                 {/* Left Controls */}

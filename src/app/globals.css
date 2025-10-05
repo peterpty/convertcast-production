@@ -104,6 +104,22 @@
     margin-bottom: env(safe-area-inset-bottom);
   }
 
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-left {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
   /* Portrait Mode Optimizations */
   @media (orientation: portrait) {
     .floating-comments {
@@ -129,6 +145,23 @@
       height: 48px;
       padding: 0.5rem 1rem;
     }
+
+    /* True Fullscreen Video on Mobile Landscape */
+    .mobile-fullscreen-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+    }
+
+    .mobile-fullscreen-video video,
+    .mobile-fullscreen-video mux-player {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+    }
   }
 
   /* Glass Morphism Effects */
@@ -142,5 +175,75 @@
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
+  }
+
+  /* Mobile Landscape Immersive Mode */
+  @media (max-width: 768px) and (orientation: landscape) {
+    /* Hide default header on mobile landscape */
+    .mobile-landscape-hide {
+      display: none !important;
+    }
+
+    /* Video fills entire viewport */
+    .video-immersive-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    /* All UI overlays float above */
+    .ui-overlay {
+      position: fixed;
+      z-index: 50;
+    }
+
+    /* Prevent body scroll on mobile landscape */
+    body.mobile-landscape-lock {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  /* Smooth video scaling */
+  mux-player {
+    --media-object-fit: cover;
+    --media-object-position: center;
+  }
+
+  /* Hide MuxPlayer controls on mobile for cleaner look */
+  @media (max-width: 768px) {
+    mux-player::part(bottom) {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  /* LIVE-LOCK: Hide seek controls for live streams */
+  .live-locked-player::part(seek-backward-button),
+  .live-locked-player::part(seek-forward-button) {
+    display: none !important;
+  }
+
+  /* Hide timeline/seekbar on mobile to prevent seeking */
+  @media (max-width: 768px) {
+    .live-locked-player::part(time-range),
+    .live-locked-player::part(time-display),
+    .live-locked-player mux-time-range {
+      display: none !important;
+      pointer-events: none !important;
+    }
+  }
+
+  /* Prevent text selection on video for cleaner interactions */
+  mux-player {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 }

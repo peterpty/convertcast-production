@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AttendeeManagement } from '@/components/events/AttendeeManagement';
+import NotificationSettingsModal from '@/components/events/NotificationSettingsModal';
 import {
   Plus,
   Calendar,
@@ -19,7 +20,8 @@ import {
   Filter,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Bell
 } from 'lucide-react';
 
 interface Event {
@@ -93,6 +95,8 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedEventForManagement, setSelectedEventForManagement] = useState<string | null>(null);
   const [attendeeCount, setAttendeeCount] = useState<Record<string, number>>({});
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [selectedEventForNotifications, setSelectedEventForNotifications] = useState<string | null>(null);
 
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
@@ -341,8 +345,15 @@ export default function EventsPage() {
                 </>
               )}
 
-              <button className="bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 px-6 py-3 rounded-xl font-semibold transition-all duration-200">
-                Settings
+              <button
+                onClick={() => {
+                  setSelectedEventForNotifications(event.id);
+                  setShowNotificationModal(true);
+                }}
+                className="bg-blue-600/20 border border-blue-500/30 text-blue-200 hover:text-white hover:bg-blue-600/30 px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2"
+              >
+                <Bell className="w-4 h-4" />
+                Notification Settings
               </button>
             </div>
 
@@ -497,6 +508,21 @@ export default function EventsPage() {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Notification Settings Modal */}
+      {selectedEventForNotifications && (
+        <NotificationSettingsModal
+          isOpen={showNotificationModal}
+          onClose={() => {
+            setShowNotificationModal(false);
+            setSelectedEventForNotifications(null);
+          }}
+          eventId={selectedEventForNotifications}
+          onSave={(settings) => {
+            console.log('Notification settings saved for event:', selectedEventForNotifications, settings);
+          }}
+        />
       )}
     </DashboardLayout>
   );

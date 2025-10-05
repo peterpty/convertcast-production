@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { IntegrationsTab } from '@/components/settings/IntegrationsTab';
 import {
   Settings,
   User,
@@ -241,44 +242,7 @@ export default function SettingsPage() {
         );
 
       case 'integrations':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h3 className="text-xl font-bold text-white mb-6">Integrations</h3>
-              <div className="grid md:grid-cols-2 gap-6">
-                {[
-                  { name: 'Zoom', status: 'Connected', desc: 'Backup streaming option' },
-                  { name: 'YouTube Live', status: 'Available', desc: 'Multi-platform streaming' },
-                  { name: 'Facebook Live', status: 'Available', desc: 'Social media reach' },
-                  { name: 'Zapier', status: 'Connected', desc: 'Automation workflows' },
-                  { name: 'Salesforce', status: 'Available', desc: 'CRM integration' },
-                  { name: 'HubSpot', status: 'Connected', desc: 'Marketing automation' },
-                ].map((integration, index) => (
-                  <div key={index} className="bg-slate-900/50 border border-purple-500/20 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-white font-semibold">{integration.name}</h4>
-                      <span className={`text-sm px-3 py-1 rounded-full ${
-                        integration.status === 'Connected'
-                          ? 'bg-green-600/20 text-green-400 border border-green-500/30'
-                          : 'bg-gray-600/20 text-gray-400 border border-gray-500/30'
-                      }`}>
-                        {integration.status}
-                      </span>
-                    </div>
-                    <p className="text-purple-200/80 text-sm mb-4">{integration.desc}</p>
-                    <button className={`w-full px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      integration.status === 'Connected'
-                        ? 'bg-red-600/20 border border-red-500/30 text-red-200 hover:text-white hover:bg-red-600/30'
-                        : 'bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30'
-                    }`}>
-                      {integration.status === 'Connected' ? 'Disconnect' : 'Connect'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
+        return <IntegrationsTab />;
 
       case 'global':
         return (

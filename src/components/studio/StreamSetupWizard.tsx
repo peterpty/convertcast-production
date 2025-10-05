@@ -22,7 +22,7 @@ import {
 
 interface StreamSetupWizardProps {
   stream: any;
-  onSetupComplete: () => void;
+  onSetupComplete: (streamId: string) => void;
 }
 
 type SetupStep = 'connect' | 'test' | 'invite' | 'ready';
@@ -626,9 +626,10 @@ export function StreamSetupWizard({ stream, onSetupComplete }: StreamSetupWizard
 
                     const data = await response.json();
                     console.log('✅ Stream saved to database:', data);
+                    console.log('🎯 Passing stream ID to onSetupComplete:', data.stream.id);
 
-                    // Call the setup complete callback
-                    onSetupComplete();
+                    // Call the setup complete callback with the stream ID
+                    onSetupComplete(data.stream.id);
                   } catch (error) {
                     console.error('❌ Failed to save stream:', error);
                     alert(`Failed to save stream: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -70,21 +70,15 @@ export default function StreamStudioPage() {
           // NO STREAM IN DATABASE - GET OR CREATE USER-SPECIFIC STREAM
           console.log('🔍 No stream in database. Getting user-specific stream...');
 
-          // Get auth token
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
-            throw new Error('No active session');
-          }
-
-          // Call USER-SPECIFIC stream endpoint (FIXES BUG: was calling global /latest)
+          // Call USER-SPECIFIC stream endpoint (auth via cookies automatically)
           const userStreamResponse = await fetch('/api/mux/stream/user', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`
-            }
+            credentials: 'include' // Include cookies for auth
           });
 
           if (!userStreamResponse.ok) {
-            throw new Error('Failed to get user stream');
+            const errorData = await userStreamResponse.json();
+            console.error('❌ Failed to get user stream:', errorData);
+            throw new Error(errorData.message || 'Failed to get user stream');
           }
 
           const userStreamData = await userStreamResponse.json();

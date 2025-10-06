@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { muxProductionService } from '@/lib/streaming/muxProductionService';
 import type { Database } from '@/types/database';
-
-// Create Supabase client with service role for server-side operations
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 /**
  * GET /api/mux/stream/user
@@ -16,7 +11,7 @@ const supabase = createClient<Database>(
  * This is THE endpoint that fixes the critical bug where all users shared the same stream
  *
  * Flow:
- * 1. Authenticate user
+ * 1. Authenticate user from cookies
  * 2. Get or create user's default event
  * 3. Check if user already has an active stream
  * 4. If not, create new stream in Mux AND database
@@ -26,25 +21,16 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔐 [USER-STREAM] Fetching user-specific stream...');
 
-    // Step 1: Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      console.error('❌ [USER-STREAM] No authorization header');
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'No authorization header provided' },
-        { status: 401 }
-      );
-    }
+    // Step 1: Authenticate user from cookies (proper Next.js pattern)
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 
-    // Get user from auth header
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       console.error('❌ [USER-STREAM] Auth failed:', authError);
       return NextResponse.json(
-        { error: 'Unauthorized', message: 'Invalid or expired token' },
+        { error: 'Unauthorized', message: 'User not authenticated' },
         { status: 401 }
       );
     }
@@ -52,11 +38,11 @@ export async function GET(request: NextRequest) {
     console.log('✅ [USER-STREAM] User authenticated:', user.id);
 
     // Step 2: Get or create user's default event
-    let event = await getUserDefaultEvent(user.id);
+    let event = await getUserDefaultEvent(supabase, user.id);
 
     if (!event) {
       console.log('📝 [USER-STREAM] No event found, creating default event...');
-      event = await createDefaultEvent(user.id);
+      event = await createDefaultEvent(supabase, user.id);
     }
 
     console.log('✅ [USER-STREAM] Event ready:', event.id);
@@ -169,7 +155,7 @@ export async function GET(request: NextRequest) {
 /**
  * Get user's default event (or most recent event)
  */
-async function getUserDefaultEvent(userId: string) {
+async function getUserDefaultEvent(supabase: any, userId: string) {
   const { data: events, error } = await supabase
     .from('events')
     .select('*')
@@ -188,7 +174,7 @@ async function getUserDefaultEvent(userId: string) {
 /**
  * Create a default event for the user
  */
-async function createDefaultEvent(userId: string) {
+async function createDefaultEvent(supabase: any, userId: string) {
   const now = new Date();
   const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
 

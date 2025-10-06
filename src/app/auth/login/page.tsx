@@ -118,12 +118,12 @@ export default function LoginPage() {
           {/* Sign In Card */}
           <div className="bg-gradient-to-b from-slate-800/60 to-slate-900/60 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
             {/* Card Header */}
-            <div className="p-8 pb-6">
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">
+            <div className="p-6 sm:p-8 pb-6">
+              <div className="text-center mb-6 sm:mb-8">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                   {mode === 'signin' ? 'Welcome back' : 'Create account'}
                 </h1>
-                <p className="text-gray-400">
+                <p className="text-sm sm:text-base text-gray-400">
                   {mode === 'signin'
                     ? 'Sign in to access your dashboard'
                     : 'Get started with ConvertCast'}
@@ -133,8 +133,9 @@ export default function LoginPage() {
               {/* Mode Toggle */}
               <div className="flex gap-2 mb-6 bg-slate-700/30 p-1 rounded-lg">
                 <button
+                  type="button"
                   onClick={() => { setMode('signin'); setError(null); }}
-                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                  className={`flex-1 py-2.5 sm:py-2 px-4 rounded-md font-medium transition-all text-sm sm:text-base touch-manipulation ${
                     mode === 'signin'
                       ? 'bg-purple-500 text-white shadow-lg'
                       : 'text-gray-400 hover:text-white'
@@ -143,8 +144,9 @@ export default function LoginPage() {
                   Sign In
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setMode('signup'); setError(null); }}
-                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                  className={`flex-1 py-2.5 sm:py-2 px-4 rounded-md font-medium transition-all text-sm sm:text-base touch-manipulation ${
                     mode === 'signup'
                       ? 'bg-purple-500 text-white shadow-lg'
                       : 'text-gray-400 hover:text-white'

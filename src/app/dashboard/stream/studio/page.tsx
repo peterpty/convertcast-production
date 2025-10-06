@@ -67,29 +67,84 @@ export default function StreamStudioPage() {
         }
 
         if (!stream) {
-          // NO STREAM IN DATABASE - GET OR CREATE USER-SPECIFIC STREAM
-          console.log('🔍 No stream in database. Getting user-specific stream...');
+          // NO STREAM IN DATABASE - CREATE ONE FOR THIS USER
+          console.log('🔍 No stream in database. Creating user stream...');
 
-          // Call USER-SPECIFIC stream endpoint (auth via cookies automatically)
-          const userStreamResponse = await fetch('/api/mux/stream/user', {
-            credentials: 'include' // Include cookies for auth
-          });
+          // Step 1: Get or create user's event (client-side, RLS will ensure user's own event)
+          let userEvent;
 
-          if (!userStreamResponse.ok) {
-            const errorData = await userStreamResponse.json();
-            console.error('❌ Failed to get user stream:', errorData);
-            throw new Error(errorData.message || 'Failed to get user stream');
+          const { data: existingEvents, error: eventQueryError } = await supabase
+            .from('events')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (eventQueryError) {
+            console.error('❌ Error querying events:', eventQueryError);
+            throw new Error('Failed to query events');
           }
 
-          const userStreamData = await userStreamResponse.json();
-          const userStream = userStreamData.stream;
+          if (existingEvents && existingEvents.length > 0) {
+            userEvent = existingEvents[0];
+            console.log('✅ Found existing event:', userEvent.id);
+          } else {
+            // Create a new event
+            console.log('📝 Creating new event for user...');
+            const now = new Date();
+            const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-          console.log('✅ Got USER-SPECIFIC stream:', userStream.id);
-          console.log('🔑 User stream key:', userStream.stream_key);
-          console.log('📊 Stream status:', userStream.status);
+            const { data: newEvent, error: createEventError } = await supabase
+              .from('events')
+              .insert({
+                user_id: user.id,
+                title: 'My Live Stream',
+                description: 'Live streaming event powered by ConvertCast',
+                scheduled_start: now.toISOString(),
+                scheduled_end: endTime.toISOString(),
+                status: 'scheduled',
+                timezone: 'UTC',
+                registration_required: false
+              })
+              .select()
+              .single();
 
-          // Query the database again to get the full stream with event
-          const { data: fullStream, error: fullStreamError } = await supabase
+            if (createEventError || !newEvent) {
+              console.error('❌ Error creating event:', createEventError);
+              throw new Error('Failed to create event');
+            }
+
+            userEvent = newEvent;
+            console.log('✅ Created new event:', userEvent.id);
+          }
+
+          // Step 2: Create Mux stream via API (uses service role to create stream in Mux + DB)
+          console.log('🎬 Creating Mux stream via API...');
+
+          const createStreamResponse = await fetch('/api/mux/stream/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              eventId: userEvent.id,
+              userId: user.id,
+              eventTitle: userEvent.title
+            }),
+            credentials: 'include'
+          });
+
+          if (!createStreamResponse.ok) {
+            const errorData = await createStreamResponse.json();
+            console.error('❌ Failed to create stream:', errorData);
+            throw new Error(errorData.error || 'Failed to create stream');
+          }
+
+          const createStreamData = await createStreamResponse.json();
+          console.log('✅ Stream created:', createStreamData.stream.id);
+
+          // Step 3: Query the created stream from database (RLS will filter to user's own)
+          const { data: newStream, error: newStreamError } = await supabase
             .from('streams')
             .select(`
               *,
@@ -103,46 +158,15 @@ export default function StreamStudioPage() {
                 user_id
               )
             `)
-            .eq('id', userStreamData.database_id)
+            .eq('id', createStreamData.stream.database_id)
             .single();
 
-          if (fullStreamError || !fullStream) {
-            console.error('⚠️ Could not load full stream from database');
-            // Fallback to minimal data
-            setActiveStream({
-              id: userStreamData.database_id,
-              mux_stream_id: userStream.id,
-              mux_playback_id: userStream.playback_id,
-              stream_key: userStream.stream_key,
-              rtmp_server_url: userStream.rtmp_server_url,
-              status: userStream.status || 'idle',
-              created_at: userStream.created_at,
-              updated_at: new Date().toISOString(),
-              event_id: userStreamData.event_id,
-              peak_viewers: 0,
-              total_viewers: 0,
-              viewer_count: 0,
-              engagemax_config: {
-                polls_enabled: true,
-                reactions_enabled: true
-              },
-              autooffer_config: {
-                enabled: true
-              },
-              events: {
-                id: userStreamData.event_id,
-                title: 'My Live Stream',
-                description: 'Live streaming event',
-                scheduled_start: new Date().toISOString(),
-                scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-                status: 'scheduled',
-                user_id: user.id
-              } as Event
-            } as Stream & { events: Event });
-          } else {
-            setActiveStream(fullStream as Stream & { events: Event });
+          if (newStreamError || !newStream) {
+            console.error('❌ Error loading created stream:', newStreamError);
+            throw new Error('Failed to load created stream');
           }
 
+          setActiveStream(newStream as Stream & { events: Event });
           setLoading(false);
           return;
         }

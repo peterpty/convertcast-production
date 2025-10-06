@@ -74,6 +74,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [permanentlyFailed, setPermanentlyFailed] = useState(false);
 
   // Handle window resize for responsive scaling
   useEffect(() => {
@@ -98,7 +99,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
 
   // HLS Stream Management
   useEffect(() => {
-    if (!muxPlaybackId || !videoRef.current) {
+    if (!muxPlaybackId || !videoRef.current || permanentlyFailed) {
       // Clean up existing HLS instance if playback ID is removed
       if (hlsInstance) {
         hlsInstance.destroy();
@@ -150,6 +151,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
         setVideoReady(true);
         setRetryAttempts(0);
         setIsRetrying(false);
+        setPermanentlyFailed(false); // Reset permanent failure flag on success
       });
 
       hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
@@ -177,8 +179,11 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
                   setRetryAttempts(prev => prev + 1);
                 }, 2000 * (retryAttempts + 1)); // Exponential backoff
               } else {
-                setVideoError('Stream unavailable - please check your connection');
+                console.log('❌ HLS: Max retries reached, stopping attempts');
+                setVideoError('Stream not available. Start streaming from OBS to see the preview.');
                 setVideoReady(false);
+                setPermanentlyFailed(true);
+                hls.destroy();
               }
               break;
 

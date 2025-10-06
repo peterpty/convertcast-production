@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       .insert({
         event_id: eventId,
         mux_stream_id: muxStream.id,
-        mux_playback_id: muxStream.playback_ids?.[0]?.id || null,
+        mux_playback_id: muxStream.playback_id || null,
         stream_key: muxStream.stream_key,
         status: 'idle',
         peak_viewers: 0,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         database_id: dbStream.id,
         rtmp_server_url: 'rtmp://global-live.mux.com/app',
         stream_key: muxStream.stream_key,
-        playback_id: muxStream.playback_ids?.[0]?.id || '',
+        playback_id: muxStream.playback_id || '',
         status: muxStream.status,
         created_at: muxStream.created_at
       },

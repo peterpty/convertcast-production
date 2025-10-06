@@ -358,7 +358,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                {isLive ? 'Connecting to live stream...' : 'Demo Mode • 1920 × 1080'}
+                {isLive ? 'Connecting to live stream...' : 'Studio Preview • 1920 × 1080'}
               </motion.p>
 
               <motion.div
@@ -471,7 +471,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
             </div>
           ) : (
             <div className="px-3 py-1 rounded-lg bg-slate-900/80 backdrop-blur-md text-gray-300 text-sm">
-              Demo Mode
+              Waiting for Connection
             </div>
           )}
         </motion.div>

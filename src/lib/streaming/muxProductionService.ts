@@ -100,12 +100,26 @@ export class MuxProductionService {
         }
       });
 
-      if (!liveStream.stream_key || !liveStream.playback_ids?.[0]?.id) {
-        throw new Error('Invalid response from Mux API - missing stream key or playback ID');
+      console.log('📦 Raw Mux API response:', JSON.stringify({
+        id: liveStream.id,
+        stream_key: liveStream.stream_key?.substring(0, 10) + '...',
+        playback_ids: liveStream.playback_ids,
+        status: liveStream.status
+      }, null, 2));
+
+      if (!liveStream.stream_key) {
+        throw new Error('Invalid response from Mux API - missing stream key');
+      }
+
+      if (!liveStream.playback_ids || liveStream.playback_ids.length === 0 || !liveStream.playback_ids[0].id) {
+        console.error('❌ Mux API returned stream without playback_id!');
+        console.error('   Full playback_ids:', JSON.stringify(liveStream.playback_ids));
+        throw new Error('Invalid response from Mux API - missing playback ID');
       }
 
       console.log('✅ Production Mux live stream created:', liveStream.id);
-      console.log('🔑 Stream key generated:', liveStream.stream_key.substring(0, 8) + '...');
+      console.log('🔑 Stream key:', liveStream.stream_key.substring(0, 10) + '...');
+      console.log('📺 Playback ID:', liveStream.playback_ids[0].id);
 
       return {
         id: liveStream.id,

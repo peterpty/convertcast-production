@@ -517,7 +517,7 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
             <div className={`w-2.5 h-2.5 rounded-full mr-3 ${
               connected ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' : 'bg-yellow-400 animate-pulse shadow-lg shadow-yellow-400/50'
             }`}></div>
-            {connected ? 'Real-time Connected' : 'Demo Mode'}
+            {connected ? 'Real-time Connected' : 'Waiting for Stream'}
           </div>
         </div>
       </div>

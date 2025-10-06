@@ -13,6 +13,7 @@ export interface InstagramBarProps {
   onMoreMenu: () => void;
   connected?: boolean;
   className?: string;
+  isVisible?: boolean; // For auto-hide functionality
 }
 
 export function InstagramBar({
@@ -22,6 +23,7 @@ export function InstagramBar({
   onMoreMenu,
   connected = true,
   className = '',
+  isVisible = true, // Default to visible
 }: InstagramBarProps) {
   const [message, setMessage] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -65,8 +67,17 @@ export function InstagramBar({
   const buttonSize = isLandscape ? 'w-9 h-9' : 'w-11 h-11';
   const iconSize = isLandscape ? 'w-4 h-4' : 'w-5 h-5';
 
+  // Only apply auto-hide in landscape mode
+  const shouldShow = !isLandscape || isVisible;
+
+  if (!shouldShow) return null;
+
   return (
-    <div
+    <motion.div
+      initial={isLandscape ? { y: 100, opacity: 0 } : false}
+      animate={isLandscape ? { y: 0, opacity: 1 } : {}}
+      exit={isLandscape ? { y: 100, opacity: 0 } : {}}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
       className={`fixed left-0 right-0 z-50 transition-all duration-200
         bg-gradient-to-t from-black/95 via-black/80 to-transparent
         backdrop-blur-2xl border-t border-white/10
@@ -186,6 +197,6 @@ export function InstagramBar({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

@@ -21,6 +21,7 @@ import { useOrientation } from '@/hooks/useOrientation';
 import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
 import { useLandscapeLock } from '@/hooks/useLandscapeLock';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
+import { useAutoHide } from '@/hooks/useAutoHide';
 import '@/styles/instagram-overlays.css';
 import {
   Users,
@@ -71,6 +72,9 @@ export default function LiveViewerPage() {
   const keyboardState = useKeyboardDetection();
   const landscapeLock = useLandscapeLock();
   const { isMobile: isMobileDevice } = useMobileDetection();
+
+  // Auto-hide controls on mobile landscape
+  const controlsAutoHide = useAutoHide({ timeout: 3000, initiallyVisible: true });
 
   // Generate a unique viewer ID for this session
   const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
@@ -561,31 +565,84 @@ export default function LiveViewerPage() {
     setIsPrivateMessage(false);
   };
 
-  // Fullscreen handlers
+  // Fullscreen handlers - iOS compatible
   const toggleFullscreen = async () => {
-    if (!videoContainerRef.current) return;
+    const container = videoContainerRef.current;
+    if (!container) return;
 
     try {
-      if (!document.fullscreenElement) {
-        await videoContainerRef.current.requestFullscreen();
+      const doc: any = document;
+      const elem: any = container;
+
+      // Check if already in fullscreen
+      const isCurrentlyFullscreen = !!(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+
+      if (!isCurrentlyFullscreen) {
+        // Enter fullscreen with vendor prefixes
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen(); // iOS Safari
+        } else if (elem.webkitEnterFullscreen) {
+          elem.webkitEnterFullscreen(); // iOS video element
+        } else if (elem.mozRequestFullScreen) {
+          elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+          elem.msRequestFullscreen();
+        }
         setIsFullscreen(true);
       } else {
-        await document.exitFullscreen();
+        // Exit fullscreen with vendor prefixes
+        if (doc.exitFullscreen) {
+          await doc.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          doc.webkitExitFullscreen();
+        } else if (doc.mozCancelFullScreen) {
+          doc.mozCancelFullScreen();
+        } else if (doc.msExitFullscreen) {
+          doc.msExitFullscreen();
+        }
         setIsFullscreen(false);
+      }
+
+      // Haptic feedback
+      if (navigator.vibrate) {
+        navigator.vibrate(30);
       }
     } catch (err) {
       console.error('Fullscreen error:', err);
     }
   };
 
-  // Listen for fullscreen changes
+  // Listen for fullscreen changes (with vendor prefixes)
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const doc: any = document;
+      const isFullscreen = !!(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isFullscreen);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
   }, []);
 
   // Mute/unmute handler
@@ -820,9 +877,15 @@ export default function LiveViewerPage() {
             <div className={`${isMobileView ? '' : 'lg:col-span-3'}`}>
               <div
                 ref={videoContainerRef}
+                onClick={() => {
+                  // Tap anywhere to show controls on mobile landscape
+                  if (isMobileView && orientation.isLandscape) {
+                    controlsAutoHide.show();
+                  }
+                }}
                 className={`relative bg-black overflow-hidden ${
                   isMobileView && orientation.isLandscape
-                    ? 'video-immersive-container'
+                    ? 'video-immersive-container cursor-pointer'
                     : isMobileView
                     ? ''
                     : 'rounded-2xl shadow-2xl'
@@ -916,32 +979,56 @@ export default function LiveViewerPage() {
                     </div>
                   )}
 
-                  {/* Mute Toggle - Always visible on mobile */}
-                  {isMobileView && (
+                  {/* Auto-hide Controls - Mobile Landscape Only */}
+                  {isMobileView && orientation.isLandscape && (
+                    <AnimatePresence>
+                      {controlsAutoHide.isVisible && (
+                        <>
+                          {/* Mute Toggle */}
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <MuteToggle
+                              isMuted={isMuted}
+                              onToggle={toggleMute}
+                            />
+                          </motion.div>
+
+                          {/* Fullscreen Toggle */}
+                          <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.2 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={toggleFullscreen}
+                            className="fixed top-20 left-4 z-[60] w-12 h-12 rounded-full
+                              bg-black/60 backdrop-blur-xl border border-white/20
+                              flex items-center justify-center
+                              hover:bg-black/80 active:bg-black/90
+                              transition-all shadow-2xl"
+                            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                          >
+                            {isFullscreen ? (
+                              <Minimize className="w-6 h-6 text-white" />
+                            ) : (
+                              <Maximize className="w-6 h-6 text-white" />
+                            )}
+                          </motion.button>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  )}
+
+                  {/* Mute Toggle - Portrait mode (always visible) */}
+                  {isMobileView && !orientation.isLandscape && (
                     <MuteToggle
                       isMuted={isMuted}
                       onToggle={toggleMute}
                     />
-                  )}
-
-                  {/* Fullscreen Toggle - Mobile landscape only */}
-                  {isMobileView && orientation.isLandscape && (
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={toggleFullscreen}
-                      className="fixed top-20 left-4 z-[60] w-12 h-12 rounded-full
-                        bg-black/60 backdrop-blur-xl border border-white/20
-                        flex items-center justify-center
-                        hover:bg-black/80 active:bg-black/90
-                        transition-all shadow-2xl"
-                      aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                    >
-                      {isFullscreen ? (
-                        <Minimize className="w-6 h-6 text-white" />
-                      ) : (
-                        <Maximize className="w-6 h-6 text-white" />
-                      )}
-                    </motion.button>
                   )}
 
                   {/* Mobile Controls Overlay - Only show in portrait, not landscape (already fullscreen) */}
@@ -1060,6 +1147,7 @@ export default function LiveViewerPage() {
               console.log('Open more menu');
             }}
             connected={connected}
+            isVisible={orientation.isLandscape ? controlsAutoHide.isVisible : true}
           />
         )}
       </div>

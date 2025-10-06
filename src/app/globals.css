@@ -225,6 +225,25 @@
       border-radius: 0 !important;
     }
 
+    /* Scale down overlays for mobile landscape - they're too massive */
+    .video-immersive-container .overlay-container,
+    .video-immersive-container [class*="overlay"],
+    .video-immersive-container [class*="poll"],
+    .video-immersive-container [class*="cta"],
+    .video-immersive-container [class*="registration"] {
+      transform: scale(0.6) !important;
+      transform-origin: center !important;
+    }
+
+    /* Adjust specific overlay positions after scaling */
+    .video-immersive-container [class*="bottom"] {
+      transform-origin: bottom center !important;
+    }
+
+    .video-immersive-container [class*="top"] {
+      transform-origin: top center !important;
+    }
+
     /* All UI overlays float above */
     .ui-overlay {
       position: fixed;

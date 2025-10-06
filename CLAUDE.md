@@ -6,25 +6,31 @@
 
 ---
 
-## ✅ **LATEST FIX: 2025-10-06 - Chat Input Focus Bug (2-Part Fix)**
+## ✅ **LATEST FIX: 2025-10-06 - Chat Input Focus Bug (3-Part Fix)**
 
 ### **🐛 BUG FIXED: Chat Input Losing Focus During Typing**
 
-**Problem:** Viewer chat input kept "kicking out" users before they finished typing - input would lose focus every ~1 second.
+**Problem:** Viewer chat input kept "kicking out" users before they finished typing - input would lose focus every ~1-3 seconds.
 
-**Root Causes (Multi-layered):**
+**Root Causes (3 layers deep):**
 
 **Layer 1:** Keyboard detection triggering re-renders
 - `useKeyboardDetection` hook listens to `visualViewport` resize/scroll events
 - Virtual keyboard adjusts height on every keystroke
 - This triggered `setKeyboardState()` → InstagramBar re-render
 
-**Layer 2:** Watch page re-rendering constantly (THE MAIN ISSUE)
+**Layer 2:** Watch page re-rendering constantly
 - Floating reactions cleanup interval runs **every 1 second** (line 411-419)
 - WebSocket updates (chat messages, reactions, viewer count) trigger state changes
 - Each re-render of watch page recreated **inline arrow functions** passed to InstagramBar
 - InstagramBar received new prop references → forced re-render
-- Even with memoized ChatInput, parent InstagramBar re-rendered from new props
+
+**Layer 3: THE ACTUAL ROOT CAUSE** 🔥
+- InstagramBar line 141 had: `if (!shouldShow) return null;`
+- When `isVisible` changed (auto-hide every 3s in landscape), **component UNMOUNTED**
+- Entire InstagramBar including input element was **destroyed from DOM**
+- When shown again, component **remounted with fresh input element**
+- User focus lost because original input element no longer exists
 
 **Solution:**
 
@@ -33,34 +39,52 @@
 2. ✅ Used `useCallback` for internal handlers
 3. ✅ File: `src/components/viewer/InstagramBar.tsx`
 
-**Part 2 (Commit `2bcad36`):** Memoize watch page callbacks  ⭐ **KEY FIX**
+**Part 2 (Commit `2bcad36`):** Memoize watch page callbacks
 1. ✅ Memoized `handleReaction` with `useCallback`
-2. ✅ Created stable memoized callbacks:
-   - `handleInstagramSendMessage`
-   - `handleInstagramReaction`
-   - `handleInstagramShare`
-   - `handleInstagramMoreMenu`
-3. ✅ InstagramBar now receives stable function references despite frequent parent re-renders
-4. ✅ File: `src/app/watch/[id]/page.tsx`
+2. ✅ Created stable memoized callbacks for all InstagramBar props
+3. ✅ File: `src/app/watch/[id]/page.tsx`
+
+**Part 3 (Commit `73b2524`):** Prevent component unmounting ⭐ **CRITICAL FIX**
+1. ✅ **Removed:** `if (!shouldShow) return null;` (line 141)
+2. ✅ **Added:** `visibility: shouldShow ? 'visible' : 'hidden'`
+3. ✅ **Added:** `pointerEvents: shouldShow ? 'auto' : 'none'`
+4. ✅ **Updated:** Animation logic to handle show/hide without unmounting
+5. ✅ **Wrapped:** Entire InstagramBar in `React.memo()`
+6. ✅ Component now **stays mounted** - just hidden with CSS
+7. ✅ Input element **persists in DOM** - maintains focus
 
 **Technical Architecture:**
 ```
 Watch Page (re-renders every 1s)
     ↓ (stable props via useCallback)
-InstagramBar (memoized, doesn't re-render)
+InstagramBar (React.memo, stays mounted, doesn't re-render)
     ↓ (stable props via useCallback)
-ChatInput (React.memo, maintains focus)
+ChatInput (React.memo, stays mounted, maintains focus)
+
+AUTO-HIDE:
+  Hidden: visibility: hidden + pointerEvents: none + transform: translateY(100px)
+  Shown: visibility: visible + pointerEvents: auto + transform: translateY(0)
+
+  ✅ INPUT ELEMENT NEVER DESTROYED
 ```
 
+**Why Previous Fixes Didn't Work:**
+- Memoization prevented re-renders ✅
+- Stable callbacks prevented prop changes ✅
+- **BUT unmounting destroyed the entire DOM tree** ❌
+- No amount of memoization can preserve focus if element is removed from DOM
+
 **Impact:**
-- ✅ Users can now type complete messages without interruption
+- ✅ Users can now type complete messages without ANY interruption
 - ✅ Chat input maintains focus through:
+  - Auto-hide show/hide cycles (every 3s in landscape)
   - Floating reactions cleanup (every 1s)
   - WebSocket message updates
   - Viewer count changes
   - Keyboard height adjustments
+  - Orientation changes
 - ✅ No functional regressions - all features work as before
-- ✅ Performance improved - reduced unnecessary re-renders
+- ✅ Performance improved - reduced unnecessary re-renders AND re-mounts
 
 ---
 
@@ -68,13 +92,13 @@ ChatInput (React.memo, maintains focus)
 
 ### **🎯 MAJOR ACCOMPLISHMENTS:**
 
-1. ✅ **Fixed viewer chat focus bug (2-part fix)** - Users can type without interruption
+1. ✅ **Fixed viewer chat focus bug (3-part deep fix)** - Component unmounting was root cause
 2. ✅ **Fixed NULL playback_id bug** - Video preview now works
 3. ✅ **Full iPhone mobile optimization** - Homepage, Dashboard, Auth pages
 4. ✅ **Eliminated homepage stuttering** - Disabled expensive animations on mobile
 5. ✅ **Production-ready mobile experience** - All pages fully functional on iPhone
 
-**Commits:** `2bcad36`, `71b11b2`, `904b5de`, `ab9e82e`, `491b697`
+**Commits:** `73b2524` (CRITICAL), `2bcad36`, `71b11b2`, `904b5de`, `ab9e82e`, `491b697`
 **Branch:** `clean-production-v2`
 **Status:** Deployed to Vercel ✅
 

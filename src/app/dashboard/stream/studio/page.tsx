@@ -65,7 +65,31 @@ export default function StreamStudioPage() {
           throw streamError;
         }
 
-        if (!stream) {
+        // Check if stream exists but was created before the fix (2025-10-05)
+        // These old streams may share the same Mux stream key across users
+        const fixDeployedAt = new Date('2025-10-05T00:00:00Z');
+        const shouldRecreateStream = stream && new Date(stream.created_at) < fixDeployedAt;
+
+        if (shouldRecreateStream) {
+          console.log('⚠️ Stream created before user isolation fix. Creating new unique stream...');
+          console.log('📅 Old stream created at:', stream.created_at);
+
+          // Delete old stream record (will cascade delete in Mux via webhook if configured)
+          const { error: deleteError } = await supabase
+            .from('streams')
+            .delete()
+            .eq('id', stream.id);
+
+          if (deleteError) {
+            console.error('❌ Error deleting old stream:', deleteError);
+          } else {
+            console.log('✅ Old stream deleted');
+          }
+
+          // Fall through to create new stream below
+        }
+
+        if (!stream || shouldRecreateStream) {
           // NO STREAM IN DATABASE - CREATE ONE FOR THIS USER
           console.log('🔍 No stream in database. Creating user stream...');
 

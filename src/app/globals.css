@@ -215,6 +215,16 @@
       z-index: 0 !important;
     }
 
+    /* Force MuxPlayer to fill container edge-to-edge */
+    .video-immersive-container mux-player,
+    .video-immersive-container mux-player video,
+    .video-immersive-container mux-player::part(media) {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      border-radius: 0 !important;
+    }
+
     /* All UI overlays float above */
     .ui-overlay {
       position: fixed;

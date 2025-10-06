@@ -34,7 +34,9 @@ import {
   Play,
   AlertCircle,
   Lock,
-  Unlock
+  Unlock,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 
 type Stream = Database['public']['Tables']['streams']['Row'];
@@ -853,7 +855,7 @@ export default function LiveViewerPage() {
                       style={{
                         borderRadius: isMobileView && orientation.isLandscape ? '0' : isMobileView ? '0' : '1rem',
                         '--controls': isMobileView ? 'none' : 'auto',
-                        '--media-object-fit': 'contain', // Always contain to show full video
+                        '--media-object-fit': (isMobileView && orientation.isLandscape) ? 'cover' : 'contain', // Cover in landscape for fullscreen
                         '--seek-backward-button': 'none',
                         '--seek-forward-button': 'none',
                         '--time-range': isMobileView ? 'none' : 'auto',
@@ -920,6 +922,26 @@ export default function LiveViewerPage() {
                       isMuted={isMuted}
                       onToggle={toggleMute}
                     />
+                  )}
+
+                  {/* Fullscreen Toggle - Mobile landscape only */}
+                  {isMobileView && orientation.isLandscape && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={toggleFullscreen}
+                      className="fixed top-20 left-4 z-[60] w-12 h-12 rounded-full
+                        bg-black/60 backdrop-blur-xl border border-white/20
+                        flex items-center justify-center
+                        hover:bg-black/80 active:bg-black/90
+                        transition-all shadow-2xl"
+                      aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                    >
+                      {isFullscreen ? (
+                        <Minimize className="w-6 h-6 text-white" />
+                      ) : (
+                        <Maximize className="w-6 h-6 text-white" />
+                      )}
+                    </motion.button>
                   )}
 
                   {/* Mobile Controls Overlay - Only show in portrait, not landscape (already fullscreen) */}

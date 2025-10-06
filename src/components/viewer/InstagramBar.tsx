@@ -79,7 +79,7 @@ export function InstagramBar({
       exit={isLandscape ? { y: 100, opacity: 0 } : {}}
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={`fixed left-0 right-0 z-50 transition-all duration-200
-        bg-gradient-to-t from-black/95 via-black/80 to-transparent
+        bg-gradient-to-t from-white/5 via-white/3 to-transparent
         backdrop-blur-2xl border-t border-white/10
         ${isLandscape ? 'instagram-bar-landscape' : 'instagram-bar-portrait'}
         ${className}`}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
@@ -496,8 +496,8 @@ export default function LiveViewerPage() {
     }
   }, [streamId]);
 
-  // Instagram-style rapid reaction handler
-  const handleReaction = (type: string) => {
+  // Instagram-style rapid reaction handler - Memoized to prevent re-renders
+  const handleReaction = useCallback((type: string) => {
     console.log('🎯 Reaction clicked:', type);
 
     setReactions(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
@@ -539,7 +539,7 @@ export default function LiveViewerPage() {
     if (connected) {
       sendReaction(type);
     }
-  };
+  }, [connected, sendReaction]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -564,6 +564,37 @@ export default function LiveViewerPage() {
     setNewMessage('');
     setIsPrivateMessage(false);
   };
+
+  // Memoized callbacks for InstagramBar to prevent re-renders
+  const handleInstagramSendMessage = useCallback((message: string, isPrivate: boolean) => {
+    if (connected) {
+      sendChatMessage(message, viewerId, isPrivate);
+    }
+  }, [connected, sendChatMessage, viewerId]);
+
+  const handleInstagramReaction = useCallback(() => {
+    handleReaction('heart');
+  }, [handleReaction]);
+
+  const handleInstagramShare = useCallback(async () => {
+    if (navigator.share && streamData) {
+      try {
+        await navigator.share({
+          title: streamData.events.title,
+          text: `Watch ${streamData.events.title} live!`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      navigator.clipboard?.writeText(window.location.href);
+    }
+  }, [streamData]);
+
+  const handleInstagramMoreMenu = useCallback(() => {
+    console.log('Open more menu');
+  }, []);
 
   // Fullscreen handlers - iOS compatible
   const toggleFullscreen = async () => {
@@ -1117,35 +1148,10 @@ export default function LiveViewerPage() {
         {/* Instagram Bar - Mobile Only */}
         {isMobileView && (
           <InstagramBar
-            onSendMessage={(message, isPrivate) => {
-              if (connected) {
-                sendChatMessage(message, viewerId, isPrivate);
-              }
-            }}
-            onReaction={() => {
-              handleReaction('heart');
-            }}
-            onShare={async () => {
-              if (navigator.share && streamData) {
-                try {
-                  await navigator.share({
-                    title: streamData.events.title,
-                    text: `Watch ${streamData.events.title} live!`,
-                    url: window.location.href,
-                  });
-                } catch (err) {
-                  // User cancelled or share failed
-                  console.log('Share cancelled');
-                }
-              } else {
-                // Fallback: Copy to clipboard
-                navigator.clipboard?.writeText(window.location.href);
-              }
-            }}
-            onMoreMenu={() => {
-              // TODO: Open more menu
-              console.log('Open more menu');
-            }}
+            onSendMessage={handleInstagramSendMessage}
+            onReaction={handleInstagramReaction}
+            onShare={handleInstagramShare}
+            onMoreMenu={handleInstagramMoreMenu}
             connected={connected}
             isVisible={orientation.isLandscape ? controlsAutoHide.isVisible : true}
           />

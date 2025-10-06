@@ -252,20 +252,20 @@ export default function UnifiedDashboard() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 rounded-3xl p-6 mb-8 backdrop-blur-xl"
+        className="bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 mb-6 sm:mb-8 backdrop-blur-xl"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-2">
               Welcome to ConvertCast™ Command Center
             </h2>
-            <p className="text-purple-200/80">
+            <p className="text-sm sm:text-base text-purple-200/80">
               Production-ready webinar platform powered by 6 AI branded features
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-yellow-400" />
-            <span className="text-green-400 font-semibold">All Systems Operational</span>
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+            <span className="text-green-400 font-semibold text-sm sm:text-base">All Systems Operational</span>
           </div>
         </div>
       </motion.div>
@@ -275,42 +275,42 @@ export default function UnifiedDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-6 mb-6 sm:mb-8"
       >
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-200">
-          <Users className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-          <div className="text-2xl font-bold text-white">{metrics.totalViewers.toLocaleString()}</div>
-          <div className="text-sm text-purple-300">Total Viewers</div>
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.totalViewers.toLocaleString()}</div>
+          <div className="text-xs sm:text-sm text-purple-300">Total Viewers</div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-200">
-          <DollarSign className="w-8 h-8 text-green-400 mx-auto mb-3" />
-          <div className="text-2xl font-bold text-white">${metrics.totalRevenue.toLocaleString()}</div>
-          <div className="text-sm text-purple-300">Total Revenue</div>
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">${metrics.totalRevenue.toLocaleString()}</div>
+          <div className="text-xs sm:text-sm text-purple-300">Total Revenue</div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-200">
-          <Activity className="w-8 h-8 text-purple-400 mx-auto mb-3" />
-          <div className="text-2xl font-bold text-white">{metrics.avgEngagement}%</div>
-          <div className="text-sm text-purple-300">Engagement</div>
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.avgEngagement}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Engagement</div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-200">
-          <Bell className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-          <div className="text-2xl font-bold text-white">{metrics.attendanceRate}%</div>
-          <div className="text-sm text-purple-300">Attendance</div>
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.attendanceRate}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Attendance</div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-200">
-          <Target className="w-8 h-8 text-orange-400 mx-auto mb-3" />
-          <div className="text-2xl font-bold text-white">{metrics.conversionRate}%</div>
-          <div className="text-sm text-purple-300">Conversion</div>
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Target className="w-6 h-6 sm:w-8 sm:h-8 text-orange-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.conversionRate}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Conversion</div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 text-center hover:scale-105 transition-transform duration-200">
-          <Star className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
-          <div className="text-2xl font-bold text-white">{metrics.customerSatisfaction}%</div>
-          <div className="text-sm text-purple-300">Satisfaction</div>
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.customerSatisfaction}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Satisfaction</div>
         </div>
       </motion.div>
 
@@ -471,23 +471,24 @@ export default function UnifiedDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-8"
+          className="mt-6 sm:mt-8"
         >
-          <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-6">
+          <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-4 sm:mb-6">
             Quick Actions
           </h3>
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
             <motion.button
               onClick={() => window.location.href = '/dashboard/stream/studio'}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl hover:border-blue-500/40 transition-all duration-300 group"
+              className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-center shadow-2xl hover:border-blue-500/40 transition-all duration-300 group touch-manipulation"
             >
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <Play className="w-6 h-6 text-white" />
+              <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 w-fit mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-200">
+                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <h4 className="text-lg font-bold text-white mb-2">Launch Studio</h4>
-              <p className="text-purple-200/80 text-sm">Start streaming with AI-powered features</p>
+              <h4 className="text-sm sm:text-lg font-bold text-white mb-1 sm:mb-2">Launch Studio</h4>
+              <p className="text-purple-200/80 text-xs sm:text-sm hidden sm:block">Start streaming with AI-powered features</p>
+              <p className="text-purple-200/80 text-xs sm:hidden">Start streaming</p>
             </motion.button>
 
             <motion.button

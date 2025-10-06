@@ -48,14 +48,13 @@ export default function StreamStudioPage() {
           `)
           .eq('events.user_id', user.id);
 
-        // If specific stream ID provided, query for that stream. Otherwise, get most recent active/live stream.
+        // If specific stream ID provided, query for that stream. Otherwise, get most recent stream.
         if (streamId) {
           console.log('🎯 Loading specific stream by ID:', streamId);
           query = query.eq('id', streamId);
         } else {
-          console.log('📋 Loading most recent active/live stream');
+          console.log('📋 Loading most recent stream (any status)');
           query = query
-            .in('status', ['active', 'live'])
             .order('created_at', { ascending: false })
             .limit(1);
         }

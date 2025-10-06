@@ -6,33 +6,61 @@
 
 ---
 
-## ✅ **LATEST FIX: 2025-10-06 - Chat Input Focus Bug**
+## ✅ **LATEST FIX: 2025-10-06 - Chat Input Focus Bug (2-Part Fix)**
 
 ### **🐛 BUG FIXED: Chat Input Losing Focus During Typing**
 
-**Problem:** Viewer chat input kept "kicking out" users before they finished typing - input would lose focus mid-sentence.
+**Problem:** Viewer chat input kept "kicking out" users before they finished typing - input would lose focus every ~1 second.
 
-**Root Cause:**
+**Root Causes (Multi-layered):**
+
+**Layer 1:** Keyboard detection triggering re-renders
 - `useKeyboardDetection` hook listens to `visualViewport` resize/scroll events
-- Virtual keyboard adjusts height slightly on every keystroke
-- This triggered `setKeyboardState()` → parent component re-render
-- Input element lost focus on every re-render
+- Virtual keyboard adjusts height on every keystroke
+- This triggered `setKeyboardState()` → InstagramBar re-render
 
-**Solution (Commit `71b11b2`):**
+**Layer 2:** Watch page re-rendering constantly (THE MAIN ISSUE)
+- Floating reactions cleanup interval runs **every 1 second** (line 411-419)
+- WebSocket updates (chat messages, reactions, viewer count) trigger state changes
+- Each re-render of watch page recreated **inline arrow functions** passed to InstagramBar
+- InstagramBar received new prop references → forced re-render
+- Even with memoized ChatInput, parent InstagramBar re-rendered from new props
+
+**Solution:**
+
+**Part 1 (Commit `71b11b2`):** Memoize InstagramBar internals
 1. ✅ Extracted chat input into memoized `ChatInput` component with `React.memo()`
-2. ✅ Used `useCallback` for all handlers (`handleMessageChange`, `handleSubmit`, etc.)
-3. ✅ Input now isolated from parent re-renders
-4. ✅ Focus maintained during typing even when parent re-renders for positioning
+2. ✅ Used `useCallback` for internal handlers
+3. ✅ File: `src/components/viewer/InstagramBar.tsx`
 
-**Technical Details:**
-- File: `src/components/viewer/InstagramBar.tsx`
-- Pattern: Component memoization with stable prop references
-- Result: Input maintains focus through keyboard state changes
+**Part 2 (Commit `2bcad36`):** Memoize watch page callbacks  ⭐ **KEY FIX**
+1. ✅ Memoized `handleReaction` with `useCallback`
+2. ✅ Created stable memoized callbacks:
+   - `handleInstagramSendMessage`
+   - `handleInstagramReaction`
+   - `handleInstagramShare`
+   - `handleInstagramMoreMenu`
+3. ✅ InstagramBar now receives stable function references despite frequent parent re-renders
+4. ✅ File: `src/app/watch/[id]/page.tsx`
+
+**Technical Architecture:**
+```
+Watch Page (re-renders every 1s)
+    ↓ (stable props via useCallback)
+InstagramBar (memoized, doesn't re-render)
+    ↓ (stable props via useCallback)
+ChatInput (React.memo, maintains focus)
+```
 
 **Impact:**
 - ✅ Users can now type complete messages without interruption
-- ✅ Chat UX vastly improved on mobile
+- ✅ Chat input maintains focus through:
+  - Floating reactions cleanup (every 1s)
+  - WebSocket message updates
+  - Viewer count changes
+  - Keyboard height adjustments
 - ✅ No functional regressions - all features work as before
+- ✅ Performance improved - reduced unnecessary re-renders
 
 ---
 
@@ -40,13 +68,13 @@
 
 ### **🎯 MAJOR ACCOMPLISHMENTS:**
 
-1. ✅ **Fixed viewer chat focus bug** - Users can type without interruption
+1. ✅ **Fixed viewer chat focus bug (2-part fix)** - Users can type without interruption
 2. ✅ **Fixed NULL playback_id bug** - Video preview now works
 3. ✅ **Full iPhone mobile optimization** - Homepage, Dashboard, Auth pages
 4. ✅ **Eliminated homepage stuttering** - Disabled expensive animations on mobile
 5. ✅ **Production-ready mobile experience** - All pages fully functional on iPhone
 
-**Commits:** `71b11b2`, `904b5de`, `ab9e82e`, `491b697`
+**Commits:** `2bcad36`, `71b11b2`, `904b5de`, `ab9e82e`, `491b697`
 **Branch:** `clean-production-v2`
 **Status:** Deployed to Vercel ✅
 

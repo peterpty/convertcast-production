@@ -178,8 +178,9 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
         console.log('   RTMP Server:', stream.rtmp_server_url);
         console.log('   Created At:', stream.created_at);
 
-        if (!stream.mux_stream_id || !stream.stream_key || !stream.mux_playback_id) {
-          // This should NEVER happen if parent page created stream correctly
+        // Only require CRITICAL fields (stream_key for OBS connection)
+        // Playback ID can be NULL if Mux hasn't generated it yet
+        if (!stream.mux_stream_id || !stream.stream_key) {
           console.error('❌ CRITICAL: Stream prop missing required Mux credentials!');
           console.error('   Missing fields:', {
             mux_stream_id: !stream.mux_stream_id,
@@ -187,15 +188,21 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
             mux_playback_id: !stream.mux_playback_id
           });
           console.error('   Full stream object:', JSON.stringify(stream, null, 2));
-          throw new Error('Stream prop missing required Mux credentials. Parent page MUST create stream with all fields first.');
+          throw new Error('Stream prop missing required Mux credentials (stream_key). Parent page MUST create stream with all fields first.');
         }
 
-        console.log('✅ Stream has all required credentials - proceeding');
+        // Warn if playback_id is missing but don't fail
+        if (!stream.mux_playback_id) {
+          console.warn('⚠️ WARNING: Stream missing playback_id - video preview will not work until Mux generates it');
+          console.warn('   This is expected for newly created streams. Preview will work once OBS connects.');
+        }
+
+        console.log('✅ Stream has required credentials - proceeding');
         muxStreamData = {
           id: stream.mux_stream_id,
           rtmp_server_url: stream.rtmp_server_url || 'rtmp://global-live.mux.com/app',
           stream_key: stream.stream_key,
-          playback_id: stream.mux_playback_id,
+          playback_id: stream.mux_playback_id || '', // Empty string if NULL
           status: 'idle',
           max_continuous_duration: 10800,
           created_at: stream.created_at
@@ -684,7 +691,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
                   </div>
                 )}
                 <div className="px-4 py-2 bg-slate-800/60 border border-slate-600/50 rounded-lg text-gray-200 text-sm font-medium">
-                  {muxStream?.playback_id ? 'Live Stream' : 'Demo Mode'} • 16:9
+                  Studio Preview • 16:9
                 </div>
                 <button className="px-5 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 hover:text-white text-sm rounded-lg transition-all border border-purple-500/30 hover:border-purple-500/50 font-medium">
                   Fullscreen

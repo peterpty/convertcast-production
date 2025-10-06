@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { UserCheck, Zap, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { usePerformanceMode } from '@/hooks/usePerformanceMode';
 
 const problems = [
   {
@@ -59,28 +60,32 @@ const cardVariants = {
 };
 
 export default function Problems() {
+  const { shouldDisableBlur, shouldReduceAnimations } = usePerformanceMode();
+
   return (
-    <section id="problems" className="py-24 bg-slate-950 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0">
-        <motion.div
-          className="absolute top-20 right-20 w-64 h-64 bg-red-500/5 rounded-full blur-3xl"
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 8, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute bottom-20 left-20 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"
-          animate={{ scale: [1, 0.8, 1] }}
-          transition={{ duration: 10, repeat: Infinity }}
-        />
-      </div>
+    <section id="problems" className="py-16 sm:py-24 bg-slate-950 relative overflow-hidden">
+      {/* Background Elements - Disabled on mobile for performance */}
+      {!shouldDisableBlur && (
+        <div className="absolute inset-0">
+          <motion.div
+            className="absolute top-20 right-20 w-64 h-64 bg-red-500/5 rounded-full blur-3xl"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 8, repeat: Infinity }}
+          />
+          <motion.div
+            className="absolute bottom-20 left-20 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"
+            animate={{ scale: [1, 0.8, 1] }}
+            transition={{ duration: 10, repeat: Infinity }}
+          />
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          className="text-center mb-12 sm:mb-16"
+          initial={shouldReduceAnimations ? false : { opacity: 0, y: 30 }}
+          whileInView={shouldReduceAnimations ? false : { opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
@@ -89,11 +94,11 @@ export default function Problems() {
             <span className="text-red-300 text-sm font-medium">The 3 Critical Problems</span>
           </div>
 
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6 px-4">
             Why Most <span className="text-red-400">Webinars Fail</span>
           </h2>
 
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto px-4">
             Traditional webinar platforms leave you struggling with the same three problems.
             ConvertCast solves them all with AI-powered solutions.
           </p>

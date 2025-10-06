@@ -78,7 +78,8 @@ const ChatInput = memo(({
 
 ChatInput.displayName = 'ChatInput';
 
-export function InstagramBar({
+// Memoize entire component to prevent re-renders when parent updates
+const InstagramBarComponent = ({
   onSendMessage,
   onReaction,
   onShare,
@@ -86,7 +87,7 @@ export function InstagramBar({
   connected = true,
   className = '',
   isVisible = true, // Default to visible
-}: InstagramBarProps) {
+}: InstagramBarProps) => {
   const [message, setMessage] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const orientation = useOrientation();
@@ -137,13 +138,18 @@ export function InstagramBar({
   // Only apply auto-hide in landscape mode
   const shouldShow = !isLandscape || isVisible;
 
-  if (!shouldShow) return null;
-
+  // CRITICAL FIX: Don't unmount when hidden - use CSS/animation instead
+  // Unmounting destroys the input element and causes focus loss
   return (
     <motion.div
       initial={isLandscape ? { y: 100, opacity: 0 } : false}
-      animate={isLandscape ? { y: 0, opacity: 1 } : {}}
-      exit={isLandscape ? { y: 100, opacity: 0 } : {}}
+      animate={
+        isLandscape
+          ? shouldShow
+            ? { y: 0, opacity: 1 }
+            : { y: 100, opacity: 0 }
+          : {}
+      }
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={`fixed left-0 right-0 z-50 transition-all duration-200
         bg-black/40 backdrop-blur-2xl border-t border-white/10
@@ -152,6 +158,8 @@ export function InstagramBar({
       style={{
         bottom: `max(${bottomPosition}px, env(safe-area-inset-bottom, 0px))`,
         paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
+        pointerEvents: shouldShow ? 'auto' : 'none', // Disable interactions when hidden
+        visibility: shouldShow ? 'visible' : 'hidden', // Hide but keep in DOM
       }}
     >
       <div
@@ -232,4 +240,7 @@ export function InstagramBar({
       </AnimatePresence>
     </motion.div>
   );
-}
+};
+
+// Export memoized version to prevent unnecessary re-renders
+export const InstagramBar = memo(InstagramBarComponent);

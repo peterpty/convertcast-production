@@ -65,15 +65,28 @@ export default function StreamStudioPage() {
           throw streamError;
         }
 
-        // AGGRESSIVE FIX: Force recreation of ALL existing streams
-        // This ensures every user gets a fresh unique stream key
-        const shouldRecreateStream = !!stream;
+        // Check if stream was created before the final fix deployment
+        // Only recreate streams created before we fixed the StudioDashboard loading
+        const finalFixDeployedAt = new Date('2025-10-05T18:00:00Z'); // Today 6pm
+        const isOldStream = stream && new Date(stream.created_at) < finalFixDeployedAt;
+
+        // Also check for known shared keys
+        const knownSharedKeys = [
+          '20fc653f-c1df-8c32-b19f-9d3722f56417',
+          '98a4dc60-f43d-bf68-4f86-c6d535b0b78d',
+          'b49ae6d5-05ce-d723-d9c1-12f15df3535d',
+        ];
+        const isSharedKey = stream && stream.stream_key && knownSharedKeys.includes(stream.stream_key);
+
+        const shouldRecreateStream = isOldStream || isSharedKey;
 
         console.log('🔍 Stream check:', {
           hasStream: !!stream,
           streamId: stream?.id,
           streamKey: stream?.stream_key,
           createdAt: stream?.created_at,
+          isOld: isOldStream,
+          isShared: isSharedKey,
           willRecreate: shouldRecreateStream
         });
 
@@ -204,10 +217,26 @@ export default function StreamStudioPage() {
             throw new Error('Failed to load created stream');
           }
 
+          console.log('✅ Loaded newly created stream from database:', {
+            id: newStream.id,
+            mux_stream_id: newStream.mux_stream_id,
+            stream_key: newStream.stream_key,
+            mux_playback_id: newStream.mux_playback_id,
+            has_all_credentials: !!(newStream.mux_stream_id && newStream.stream_key && newStream.mux_playback_id)
+          });
+
           setActiveStream(newStream as Stream & { events: Event });
           setLoading(false);
           return;
         }
+
+        console.log('✅ Using existing stream (no recreation needed):', {
+          id: stream.id,
+          mux_stream_id: stream.mux_stream_id,
+          stream_key: stream.stream_key,
+          mux_playback_id: stream.mux_playback_id,
+          has_all_credentials: !!(stream.mux_stream_id && stream.stream_key && stream.mux_playback_id)
+        });
 
         setActiveStream(stream as Stream & { events: Event });
       } catch (err) {

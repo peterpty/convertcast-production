@@ -156,6 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ AuthContext: Email sign in successful');
       console.log('👤 AuthContext: User:', data.user.email);
+
+      // Redirect to dashboard immediately after successful login
+      console.log('🎯 AuthContext: Redirecting to dashboard...');
+      router.push('/dashboard');
     } catch (error) {
       console.error('❌ AuthContext: Sign in error:', error);
       throw error;
@@ -199,13 +203,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('🚪 AuthContext: Signing out...');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        console.error('❌ AuthContext: Error signing out:', error);
         throw error;
       }
+      console.log('✅ AuthContext: Sign out successful, redirecting to login...');
+
+      // Force immediate redirect (don't wait for auth state change)
+      router.push('/auth/login');
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ AuthContext: Sign out error:', error);
       throw error;
     }
   };

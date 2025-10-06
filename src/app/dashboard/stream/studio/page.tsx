@@ -65,16 +65,32 @@ export default function StreamStudioPage() {
           throw streamError;
         }
 
-        // Check if stream exists but was created before the fix (2025-10-05)
-        // These old streams may share the same Mux stream key across users
+        // Check if this is a shared stream that needs to be replaced
+        // Known shared stream key from before the fix: 20fc653f-c1df-8c32-b19f-9d3722f56417
+        const knownSharedKeys = [
+          '20fc653f-c1df-8c32-b19f-9d3722f56417',
+          // Add more known shared keys here if discovered
+        ];
+
+        const isSharedStream = stream && stream.stream_key && knownSharedKeys.includes(stream.stream_key);
+
+        // Also check if created before the fix
         const fixDeployedAt = new Date('2025-10-05T00:00:00Z');
-        const shouldRecreateStream = stream && new Date(stream.created_at) < fixDeployedAt;
+        const isOldStream = stream && new Date(stream.created_at) < fixDeployedAt;
+
+        const shouldRecreateStream = isSharedStream || isOldStream;
 
         if (shouldRecreateStream) {
-          console.log('⚠️ Stream created before user isolation fix. Creating new unique stream...');
-          console.log('📅 Old stream created at:', stream.created_at);
+          console.log('🚨 SHARED STREAM DETECTED - Replacing with unique stream...');
+          if (isSharedStream) {
+            console.log('🔑 Shared stream key detected:', stream.stream_key);
+          }
+          if (isOldStream) {
+            console.log('📅 Old stream created at:', stream.created_at);
+          }
 
-          // Delete old stream record (will cascade delete in Mux via webhook if configured)
+          // Delete old stream record
+          console.log('🗑️ Deleting shared stream record...');
           const { error: deleteError } = await supabase
             .from('streams')
             .delete()
@@ -82,8 +98,9 @@ export default function StreamStudioPage() {
 
           if (deleteError) {
             console.error('❌ Error deleting old stream:', deleteError);
+            // Continue anyway - we'll create a new one
           } else {
-            console.log('✅ Old stream deleted');
+            console.log('✅ Shared stream deleted successfully');
           }
 
           // Fall through to create new stream below
@@ -164,7 +181,11 @@ export default function StreamStudioPage() {
           }
 
           const createStreamData = await createStreamResponse.json();
-          console.log('✅ Stream created:', createStreamData.stream.id);
+          console.log('✅ Stream created via API:');
+          console.log('   Mux Stream ID:', createStreamData.stream.id);
+          console.log('   Stream Key:', createStreamData.stream.stream_key);
+          console.log('   Database ID:', createStreamData.stream.database_id);
+          console.log('   Event ID:', createStreamData.event_id);
 
           // Step 3: Query the created stream from database (RLS will filter to user's own)
           const { data: newStream, error: newStreamError } = await supabase

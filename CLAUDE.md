@@ -1,8 +1,38 @@
 # ConvertCast Development Status
 
-**Last Updated:** 2025-10-06 (✅ COMPLETE: Mobile Optimization + Playback ID Fix)
+**Last Updated:** 2025-10-06 (✅ COMPLETE: Chat Focus Fix + Mobile Optimization + Playback ID Fix)
 **Development Server:** http://localhost:3009
 **Production Status:** ✅ PRODUCTION READY - All systems operational
+
+---
+
+## ✅ **LATEST FIX: 2025-10-06 - Chat Input Focus Bug**
+
+### **🐛 BUG FIXED: Chat Input Losing Focus During Typing**
+
+**Problem:** Viewer chat input kept "kicking out" users before they finished typing - input would lose focus mid-sentence.
+
+**Root Cause:**
+- `useKeyboardDetection` hook listens to `visualViewport` resize/scroll events
+- Virtual keyboard adjusts height slightly on every keystroke
+- This triggered `setKeyboardState()` → parent component re-render
+- Input element lost focus on every re-render
+
+**Solution (Commit `71b11b2`):**
+1. ✅ Extracted chat input into memoized `ChatInput` component with `React.memo()`
+2. ✅ Used `useCallback` for all handlers (`handleMessageChange`, `handleSubmit`, etc.)
+3. ✅ Input now isolated from parent re-renders
+4. ✅ Focus maintained during typing even when parent re-renders for positioning
+
+**Technical Details:**
+- File: `src/components/viewer/InstagramBar.tsx`
+- Pattern: Component memoization with stable prop references
+- Result: Input maintains focus through keyboard state changes
+
+**Impact:**
+- ✅ Users can now type complete messages without interruption
+- ✅ Chat UX vastly improved on mobile
+- ✅ No functional regressions - all features work as before
 
 ---
 
@@ -10,12 +40,13 @@
 
 ### **🎯 MAJOR ACCOMPLISHMENTS:**
 
-1. ✅ **Fixed NULL playback_id bug** - Video preview now works
-2. ✅ **Full iPhone mobile optimization** - Homepage, Dashboard, Auth pages
-3. ✅ **Eliminated homepage stuttering** - Disabled expensive animations on mobile
-4. ✅ **Production-ready mobile experience** - All pages fully functional on iPhone
+1. ✅ **Fixed viewer chat focus bug** - Users can type without interruption
+2. ✅ **Fixed NULL playback_id bug** - Video preview now works
+3. ✅ **Full iPhone mobile optimization** - Homepage, Dashboard, Auth pages
+4. ✅ **Eliminated homepage stuttering** - Disabled expensive animations on mobile
+5. ✅ **Production-ready mobile experience** - All pages fully functional on iPhone
 
-**Commits:** `904b5de`, `ab9e82e`, `491b697`
+**Commits:** `71b11b2`, `904b5de`, `ab9e82e`, `491b697`
 **Branch:** `clean-production-v2`
 **Status:** Deployed to Vercel ✅
 

@@ -65,32 +65,25 @@ export default function StreamStudioPage() {
           throw streamError;
         }
 
-        // Check if this is a shared stream that needs to be replaced
-        // Known shared stream key from before the fix: 20fc653f-c1df-8c32-b19f-9d3722f56417
-        const knownSharedKeys = [
-          '20fc653f-c1df-8c32-b19f-9d3722f56417',
-          // Add more known shared keys here if discovered
-        ];
+        // AGGRESSIVE FIX: Force recreation of ALL existing streams
+        // This ensures every user gets a fresh unique stream key
+        const shouldRecreateStream = !!stream;
 
-        const isSharedStream = stream && stream.stream_key && knownSharedKeys.includes(stream.stream_key);
-
-        // Also check if created before the fix
-        const fixDeployedAt = new Date('2025-10-05T00:00:00Z');
-        const isOldStream = stream && new Date(stream.created_at) < fixDeployedAt;
-
-        const shouldRecreateStream = isSharedStream || isOldStream;
+        console.log('🔍 Stream check:', {
+          hasStream: !!stream,
+          streamId: stream?.id,
+          streamKey: stream?.stream_key,
+          createdAt: stream?.created_at,
+          willRecreate: shouldRecreateStream
+        });
 
         if (shouldRecreateStream) {
-          console.log('🚨 SHARED STREAM DETECTED - Replacing with unique stream...');
-          if (isSharedStream) {
-            console.log('🔑 Shared stream key detected:', stream.stream_key);
-          }
-          if (isOldStream) {
-            console.log('📅 Old stream created at:', stream.created_at);
-          }
+          console.log('🚨 FORCING FRESH STREAM - Deleting existing stream...');
+          console.log('   Old Stream Key:', stream.stream_key);
+          console.log('   Old Stream ID:', stream.id);
+          console.log('   Created At:', stream.created_at);
 
           // Delete old stream record
-          console.log('🗑️ Deleting shared stream record...');
           const { error: deleteError } = await supabase
             .from('streams')
             .delete()
@@ -98,9 +91,10 @@ export default function StreamStudioPage() {
 
           if (deleteError) {
             console.error('❌ Error deleting old stream:', deleteError);
-            // Continue anyway - we'll create a new one
+            console.error('   Error details:', JSON.stringify(deleteError, null, 2));
+            // Continue anyway - we'll try to create a new one
           } else {
-            console.log('✅ Shared stream deleted successfully');
+            console.log('✅ Old stream deleted successfully');
           }
 
           // Fall through to create new stream below

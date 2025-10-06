@@ -41,20 +41,35 @@ After removing demo mode fallback, video preview stopped working entirely:
 - ✅ Added warning when playback_id missing but continue anyway
 - ✅ LivePreview shows "Waiting for Connection" when no playback_id
 
-#### **Current Investigation:**
+#### **Root Cause Found & Fixed:**
 
 **Question:** Why is `mux_playback_id` NULL in database?
 
-**Possible Causes:**
-1. Mux API not returning `playback_ids` array immediately
-2. Database INSERT failing to save playback_id
-3. Timing issue - playback_id generated async by Mux
+**ANSWER:** Property name mismatch in API route!
 
-**Next Steps:**
-1. ✅ Fixed component to work without playback_id
-2. ⏳ User needs to delete old streams and test new stream creation
-3. ⏳ Check console logs for raw Mux API response
-4. ⏳ Verify if Mux returns playback_ids or generates them later
+**The Bug (Commit `958065f`):**
+```typescript
+// API route was accessing WRONG property:
+mux_playback_id: muxStream.playback_ids?.[0]?.id || null  // ❌ Array doesn't exist
+
+// Service returns SINGULAR string:
+return {
+  playback_id: liveStream.playback_ids[0].id  // ← Returns string, not array
+}
+
+// Fix:
+mux_playback_id: muxStream.playback_id || null  // ✅ Correct property
+```
+
+**Impact:**
+- API was trying to access `playback_ids[0].id` on object that has `playback_id`
+- Result: undefined, saved as NULL in database
+- Video preview failed because no playback_id to load video
+
+**Solution:**
+1. ✅ Fixed property access in `/api/mux/stream/create/route.ts` (lines 70, 103)
+2. ✅ All NEW streams will now save playback_id correctly
+3. ⏳ Old streams with NULL playback_id must be deleted and recreated
 
 **SQL Cleanup Required:**
 ```sql
@@ -66,6 +81,13 @@ DELETE FROM streams WHERE created_at < '2025-10-05 18:00:00+00'::timestamptz;
 - `src/components/studio/LivePreview.tsx` - Updated status text
 - `src/components/studio/RightPanel.tsx` - Updated status text
 - `src/components/studio/StudioDashboard.tsx` - Fixed validation logic
+- `src/app/api/mux/stream/create/route.ts` - Fixed playback_id property access ✅ ROOT CAUSE FIX
+
+**Commits:**
+- `123e571` - Remove demo mode text + add logging
+- `9d391a1` - Allow studio to work without playback_id
+- `34d12c7` - Update CLAUDE.md
+- `958065f` - **FIX ROOT CAUSE: Correct playback_id property access** ✅
 
 ---
 

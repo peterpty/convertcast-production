@@ -67,13 +67,14 @@ export function InstagramBar({
 
   return (
     <div
-      className={`fixed left-0 right-0 z-50 pb-safe transition-all duration-200
+      className={`fixed left-0 right-0 z-50 transition-all duration-200
         bg-gradient-to-t from-black/95 via-black/80 to-transparent
         backdrop-blur-2xl border-t border-white/10
         ${isLandscape ? 'instagram-bar-landscape' : 'instagram-bar-portrait'}
         ${className}`}
       style={{
-        bottom: `${bottomPosition}px`,
+        bottom: `max(${bottomPosition}px, env(safe-area-inset-bottom, 0px))`,
+        paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
       }}
     >
       <form

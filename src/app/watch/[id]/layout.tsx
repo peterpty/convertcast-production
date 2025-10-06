@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   viewport: {
     width: 'device-width',
     initialScale: 1,
-    maximumScale: 5, // Allow zoom out to see full video
-    minimumScale: 1,
-    userScalable: true, // Allow user to zoom if needed
+    maximumScale: 1, // Prevent zoom to keep UI stable
+    minimumScale: 0.5, // Allow zoom out if needed
+    userScalable: false, // Lock scale for consistent experience
     viewportFit: 'cover',
   },
   appleWebApp: {

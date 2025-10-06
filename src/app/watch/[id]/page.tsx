@@ -16,6 +16,7 @@ import { FloatingComments, type FloatingComment } from '@/components/viewer/Floa
 import { TouchReactions } from '@/components/viewer/TouchReactions';
 import { MobileControls } from '@/components/viewer/MobileControls';
 import { RotateScreen } from '@/components/viewer/RotateScreen';
+import { MuteToggle } from '@/components/viewer/MuteToggle';
 import { useOrientation } from '@/hooks/useOrientation';
 import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
 import { useLandscapeLock } from '@/hooks/useLandscapeLock';
@@ -587,7 +588,18 @@ export default function LiveViewerPage() {
 
   // Mute/unmute handler
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+
+    // Also update MuxPlayer directly if ref exists
+    if (muxPlayerRef.current?.media) {
+      muxPlayerRef.current.media.muted = newMutedState;
+    }
+
+    // Haptic feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(30);
+    }
   };
 
   // Network quality (mock for now, can be enhanced with real metrics)
@@ -800,7 +812,7 @@ export default function LiveViewerPage() {
         </div>
 
         {/* Main Content - Mobile First */}
-        <div className={`${isMobileView && orientation.isLandscape ? '' : 'container mx-auto md:px-4 md:py-6'}`}>
+        <div className={`${isMobileView && orientation.isLandscape ? 'mobile-landscape-no-container' : 'container mx-auto md:px-4 md:py-6'}`}>
           <div className={`${isMobileView ? '' : 'grid lg:grid-cols-4 gap-6'}`}>
             {/* Video Player - Fullscreen on Mobile Landscape */}
             <div className={`${isMobileView ? '' : 'lg:col-span-3'}`}>
@@ -900,6 +912,14 @@ export default function LiveViewerPage() {
                         reactions={[]}
                       />
                     </div>
+                  )}
+
+                  {/* Mute Toggle - Always visible on mobile */}
+                  {isMobileView && (
+                    <MuteToggle
+                      isMuted={isMuted}
+                      onToggle={toggleMute}
+                    />
                   )}
 
                   {/* Mobile Controls Overlay - Only show in portrait, not landscape (already fullscreen) */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Lock, Unlock, Share2, MoreVertical, Send } from 'lucide-react';
 import { useOrientation } from '@/hooks/useOrientation';
@@ -15,6 +15,68 @@ export interface InstagramBarProps {
   className?: string;
   isVisible?: boolean; // For auto-hide functionality
 }
+
+// Memoized input component to prevent re-renders from parent
+const ChatInput = memo(({
+  message,
+  onMessageChange,
+  onSubmit,
+  isPrivate,
+  isLandscape,
+  connected,
+}: {
+  message: string;
+  onMessageChange: (value: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  isPrivate: boolean;
+  isLandscape: boolean;
+  connected: boolean;
+}) => {
+  return (
+    <form onSubmit={onSubmit} className="flex-1 relative">
+      <input
+        type="text"
+        value={message}
+        onChange={(e) => onMessageChange(e.target.value)}
+        placeholder={isPrivate ? "Private message..." : "Add a comment..."}
+        disabled={!connected}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="sentences"
+        className={`w-full bg-white/10 backdrop-blur-md
+          border ${isPrivate ? 'border-purple-400/60' : 'border-white/20'}
+          rounded-full
+          ${isLandscape ? 'pl-3 pr-12 py-2 text-sm' : 'pl-4 pr-14 py-3 text-base'}
+          text-white placeholder-white/60
+          focus:bg-white/15 focus:border-white/30
+          ${isPrivate ? 'focus:border-purple-400' : ''}
+          disabled:opacity-50 disabled:cursor-not-allowed
+          transition-all duration-200 outline-none`}
+        style={{
+          fontSize: isLandscape ? '14px' : '16px', // Prevent iOS zoom on focus
+        }}
+      />
+
+      {/* Send button - ALWAYS visible, larger hit target */}
+      <button
+        type="submit"
+        disabled={!connected || !message.trim()}
+        className={`absolute ${isLandscape ? 'right-1' : 'right-1.5'} top-1/2 -translate-y-1/2
+          ${isLandscape ? 'w-8 h-8' : 'w-10 h-10'} rounded-full
+          ${message.trim() && connected
+            ? isPrivate ? 'bg-purple-500 hover:bg-purple-600' : 'bg-purple-600 hover:bg-purple-700'
+            : 'bg-gray-700/50'}
+          disabled:opacity-50 disabled:cursor-not-allowed
+          flex items-center justify-center
+          active:scale-95 transition-all shadow-lg`}
+      >
+        <Send className={`${isLandscape ? 'w-4 h-4' : 'w-5 h-5'} ${message.trim() && connected ? 'text-white' : 'text-gray-400'}`} />
+      </button>
+    </form>
+  );
+});
+
+ChatInput.displayName = 'ChatInput';
 
 export function InstagramBar({
   onSendMessage,
@@ -35,33 +97,38 @@ export function InstagramBar({
   // Calculate bottom position based on keyboard
   const bottomPosition = keyboardState.isOpen ? keyboardState.height : 0;
 
-  const handleSubmit = (e: FormEvent) => {
+  // Memoize handlers to prevent re-renders of child components
+  const handleMessageChange = useCallback((value: string) => {
+    setMessage(value);
+  }, []);
+
+  const handleSubmit = useCallback((e: FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !connected) return;
 
     onSendMessage(message.trim(), isPrivate);
     setMessage('');
-  };
+  }, [message, connected, isPrivate, onSendMessage]);
 
-  const handleReaction = () => {
+  const handleReaction = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     onReaction();
-  };
+  }, [onReaction]);
 
-  const handleTogglePrivate = () => {
+  const handleTogglePrivate = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(30);
-    setIsPrivate(!isPrivate);
-  };
+    setIsPrivate(prev => !prev);
+  }, []);
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     onShare();
-  };
+  }, [onShare]);
 
-  const handleMoreMenu = () => {
+  const handleMoreMenu = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     onMoreMenu();
-  };
+  }, [onMoreMenu]);
 
   // Button size based on orientation
   const buttonSize = isLandscape ? 'w-9 h-9' : 'w-11 h-11';
@@ -87,53 +154,20 @@ export function InstagramBar({
         paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <form
-        onSubmit={handleSubmit}
+      <div
         className={`flex items-center gap-2 ${
           isLandscape ? 'px-3 py-2' : 'px-4 py-2.5'
         }`}
       >
-        {/* Main Input with inline send button */}
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={isPrivate ? "Private message..." : "Add a comment..."}
-            disabled={!connected}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="sentences"
-            className={`w-full bg-white/10 backdrop-blur-md
-              border ${isPrivate ? 'border-purple-400/60' : 'border-white/20'}
-              rounded-full
-              ${isLandscape ? 'pl-3 pr-12 py-2 text-sm' : 'pl-4 pr-14 py-3 text-base'}
-              text-white placeholder-white/60
-              focus:bg-white/15 focus:border-white/30
-              ${isPrivate ? 'focus:border-purple-400' : ''}
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-all duration-200 outline-none`}
-            style={{
-              fontSize: isLandscape ? '14px' : '16px', // Prevent iOS zoom on focus
-            }}
-          />
-
-          {/* Send button - ALWAYS visible, larger hit target */}
-          <button
-            type="submit"
-            disabled={!connected || !message.trim()}
-            className={`absolute ${isLandscape ? 'right-1' : 'right-1.5'} top-1/2 -translate-y-1/2
-              ${isLandscape ? 'w-8 h-8' : 'w-10 h-10'} rounded-full
-              ${message.trim() && connected
-                ? isPrivate ? 'bg-purple-500 hover:bg-purple-600' : 'bg-purple-600 hover:bg-purple-700'
-                : 'bg-gray-700/50'}
-              disabled:opacity-50 disabled:cursor-not-allowed
-              flex items-center justify-center
-              active:scale-95 transition-all shadow-lg`}
-          >
-            <Send className={`${isLandscape ? 'w-4 h-4' : 'w-5 h-5'} ${message.trim() && connected ? 'text-white' : 'text-gray-400'}`} />
-          </button>
-        </div>
+        {/* Memoized Chat Input - Prevents re-renders from keyboard/orientation changes */}
+        <ChatInput
+          message={message}
+          onMessageChange={handleMessageChange}
+          onSubmit={handleSubmit}
+          isPrivate={isPrivate}
+          isLandscape={isLandscape}
+          connected={connected}
+        />
 
         {/* Compact action buttons - smaller in landscape */}
         <div className="flex items-center gap-1.5">
@@ -175,7 +209,7 @@ export function InstagramBar({
             <Heart className={`${isLandscape ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-white`} />
           </motion.button>
         </div>
-      </form>
+      </div>
 
       {/* Private Message Indicator */}
       <AnimatePresence>

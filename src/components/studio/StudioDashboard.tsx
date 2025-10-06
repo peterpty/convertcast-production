@@ -169,9 +169,15 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
       try {
         let muxStreamData: MuxLiveStream;
 
-        // If database has stream credentials, use those instead of fetching "latest"
+        // ALWAYS use stream from prop - it's already created with unique key
+        console.log('🎯 Using stream from prop (created by parent):', {
+          mux_stream_id: stream.mux_stream_id,
+          stream_key: stream.stream_key,
+          mux_playback_id: stream.mux_playback_id
+        });
+
         if (stream.mux_stream_id && stream.stream_key && stream.mux_playback_id) {
-          console.log('✅ Using stream from database:', stream.mux_stream_id);
+          console.log('✅ Stream has all required credentials');
           muxStreamData = {
             id: stream.mux_stream_id,
             rtmp_server_url: stream.rtmp_server_url || 'rtmp://global-live.mux.com/app',
@@ -181,74 +187,18 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
             max_continuous_duration: 10800,
             created_at: stream.created_at
           };
+        } else {
+          // This should NEVER happen if parent page created stream correctly
+          console.error('❌ CRITICAL: Stream prop missing credentials!', {
+            has_mux_stream_id: !!stream.mux_stream_id,
+            has_stream_key: !!stream.stream_key,
+            has_playback_id: !!stream.mux_playback_id
+          });
+          throw new Error('Stream prop missing required Mux credentials. Parent page should create stream first.');
         }
 
-        // Otherwise try to get existing stream from API
-        if (!muxStreamData) {
-          try {
-            console.log('🔍 Getting latest stream from API...');
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-            const response = await fetch('/api/mux/stream/latest', {
-              signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-              const data = await response.json();
-              if (data.success && data.stream) {
-                muxStreamData = data.stream;
-                console.log('✅ Using existing stream from API:', muxStreamData.id);
-              }
-            }
-          } catch (error) {
-            console.log('⚠️ Could not get existing stream, will create new one');
-          }
-        }
-
-        // Create new stream if we don't have one
-        if (!muxStreamData && isMounted) {
-          try {
-            console.log('🎬 Creating new stream via API...');
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-            const response = await fetch('/api/mux/stream', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ eventTitle: stream.events.title }),
-              signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-              const data = await response.json();
-              if (data.success && data.stream) {
-                muxStreamData = data.stream;
-                console.log('✅ Created new stream:', muxStreamData.id);
-
-                // Track stream creation
-                analytics.trackEvent('mux_stream_created', {
-                  streamId: stream.id,
-                  muxStreamId: muxStreamData.id,
-                  eventTitle: stream.events.title
-                });
-              }
-            } else {
-              throw new Error(`API error: ${response.status}`);
-            }
-          } catch (createError) {
-            console.error('❌ Failed to create stream via API:', createError);
-
-            analytics.trackError(createError as Error, {
-              type: 'streaming',
-              severity: 'medium',
-              context: 'mux_fallback_to_demo',
-              streamId: stream.id
-            });
-          }
-        }
+        // REMOVED: No longer fetch from API - always use prop
+        // The parent page (studio/page.tsx) already creates a unique stream per user
 
         if (!isMounted) return;
 

@@ -67,62 +67,87 @@ export default function StreamStudioPage() {
         }
 
         if (!stream) {
-          // NO STREAM IN DATABASE - LOAD LATEST FROM MUX (DON'T CREATE NEW!)
-          console.log('🔍 No stream in database. Loading LATEST from Mux...');
+          // NO STREAM IN DATABASE - GET OR CREATE USER-SPECIFIC STREAM
+          console.log('🔍 No stream in database. Getting user-specific stream...');
 
-          // Get LATEST Mux stream (the one you're already using!)
-          const muxLatestResponse = await fetch('/api/mux/stream/latest');
-
-          if (!muxLatestResponse.ok) {
-            throw new Error('Failed to load Mux stream');
+          // Get auth token
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            throw new Error('No active session');
           }
 
-          const muxLatestData = await muxLatestResponse.json();
-          const existingStream = muxLatestData.stream;
+          // Call USER-SPECIFIC stream endpoint (FIXES BUG: was calling global /latest)
+          const userStreamResponse = await fetch('/api/mux/stream/user', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
 
-          console.log('✅ Using EXISTING Mux stream:', existingStream.id);
-          console.log('🔑 Stream key:', existingStream.stream_key);
-          console.log('📊 Real Mux status:', existingStream.status);
+          if (!userStreamResponse.ok) {
+            throw new Error('Failed to get user stream');
+          }
 
-          // Format Mux data - USE REAL STATUS FROM MUX
-          setActiveStream({
-            id: existingStream.id,
-            mux_stream_id: existingStream.id,
-            mux_playback_id: existingStream.playback_id,
-            stream_key: existingStream.stream_key,
-            rtmp_server_url: existingStream.rtmp_server_url,
-            status: existingStream.status || 'idle', // ← USE REAL STATUS FROM MUX
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            event_id: 'mux-direct-event',
-            peak_viewers: 0,
-            total_viewers: 0,
-            viewer_count: 0,
-            engagemax_config: {
-              polls_enabled: true,
-              quizzes_enabled: true,
-              reactions_enabled: true,
-              ctas_enabled: true
-            },
-            autooffer_config: {
-              experiments_enabled: true,
-              dynamic_pricing: true,
-              behavioral_triggers: true
-            },
-            chat_config: {
-              enabled: true,
-              moderated: false,
-              ai_responses: true
-            },
-            events: {
-              id: 'mux-direct-event',
-              title: 'Live: How to 10x Your Webinar Conversions',
-              description: 'AI-powered live streaming event',
-              scheduled_start: new Date().toISOString(),
-              scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-              status: existingStream.status === 'active' ? 'live' : 'scheduled'
-            } as Event
-          } as Stream & { events: Event });
+          const userStreamData = await userStreamResponse.json();
+          const userStream = userStreamData.stream;
+
+          console.log('✅ Got USER-SPECIFIC stream:', userStream.id);
+          console.log('🔑 User stream key:', userStream.stream_key);
+          console.log('📊 Stream status:', userStream.status);
+
+          // Query the database again to get the full stream with event
+          const { data: fullStream, error: fullStreamError } = await supabase
+            .from('streams')
+            .select(`
+              *,
+              events!inner (
+                id,
+                title,
+                description,
+                scheduled_start,
+                scheduled_end,
+                status,
+                user_id
+              )
+            `)
+            .eq('id', userStreamData.database_id)
+            .single();
+
+          if (fullStreamError || !fullStream) {
+            console.error('⚠️ Could not load full stream from database');
+            // Fallback to minimal data
+            setActiveStream({
+              id: userStreamData.database_id,
+              mux_stream_id: userStream.id,
+              mux_playback_id: userStream.playback_id,
+              stream_key: userStream.stream_key,
+              rtmp_server_url: userStream.rtmp_server_url,
+              status: userStream.status || 'idle',
+              created_at: userStream.created_at,
+              updated_at: new Date().toISOString(),
+              event_id: userStreamData.event_id,
+              peak_viewers: 0,
+              total_viewers: 0,
+              viewer_count: 0,
+              engagemax_config: {
+                polls_enabled: true,
+                reactions_enabled: true
+              },
+              autooffer_config: {
+                enabled: true
+              },
+              events: {
+                id: userStreamData.event_id,
+                title: 'My Live Stream',
+                description: 'Live streaming event',
+                scheduled_start: new Date().toISOString(),
+                scheduled_end: new Date(Date.now() + 3600000).toISOString(),
+                status: 'scheduled',
+                user_id: user.id
+              } as Event
+            } as Stream & { events: Event });
+          } else {
+            setActiveStream(fullStream as Stream & { events: Event });
+          }
 
           setLoading(false);
           return;

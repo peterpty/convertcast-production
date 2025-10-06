@@ -170,32 +170,36 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
         let muxStreamData: MuxLiveStream;
 
         // ALWAYS use stream from prop - it's already created with unique key
-        console.log('🎯 Using stream from prop (created by parent):', {
-          mux_stream_id: stream.mux_stream_id,
-          stream_key: stream.stream_key,
-          mux_playback_id: stream.mux_playback_id
-        });
+        console.log('🎯 Using stream from prop (created by parent)');
+        console.log('   Stream ID:', stream.id);
+        console.log('   Mux Stream ID:', stream.mux_stream_id);
+        console.log('   Stream Key:', stream.stream_key ? `${stream.stream_key.substring(0, 10)}...` : 'MISSING');
+        console.log('   Playback ID:', stream.mux_playback_id);
+        console.log('   RTMP Server:', stream.rtmp_server_url);
+        console.log('   Created At:', stream.created_at);
 
-        if (stream.mux_stream_id && stream.stream_key && stream.mux_playback_id) {
-          console.log('✅ Stream has all required credentials');
-          muxStreamData = {
-            id: stream.mux_stream_id,
-            rtmp_server_url: stream.rtmp_server_url || 'rtmp://global-live.mux.com/app',
-            stream_key: stream.stream_key,
-            playback_id: stream.mux_playback_id,
-            status: 'idle',
-            max_continuous_duration: 10800,
-            created_at: stream.created_at
-          };
-        } else {
+        if (!stream.mux_stream_id || !stream.stream_key || !stream.mux_playback_id) {
           // This should NEVER happen if parent page created stream correctly
-          console.error('❌ CRITICAL: Stream prop missing credentials!', {
-            has_mux_stream_id: !!stream.mux_stream_id,
-            has_stream_key: !!stream.stream_key,
-            has_playback_id: !!stream.mux_playback_id
+          console.error('❌ CRITICAL: Stream prop missing required Mux credentials!');
+          console.error('   Missing fields:', {
+            mux_stream_id: !stream.mux_stream_id,
+            stream_key: !stream.stream_key,
+            mux_playback_id: !stream.mux_playback_id
           });
-          throw new Error('Stream prop missing required Mux credentials. Parent page should create stream first.');
+          console.error('   Full stream object:', JSON.stringify(stream, null, 2));
+          throw new Error('Stream prop missing required Mux credentials. Parent page MUST create stream with all fields first.');
         }
+
+        console.log('✅ Stream has all required credentials - proceeding');
+        muxStreamData = {
+          id: stream.mux_stream_id,
+          rtmp_server_url: stream.rtmp_server_url || 'rtmp://global-live.mux.com/app',
+          stream_key: stream.stream_key,
+          playback_id: stream.mux_playback_id,
+          status: 'idle',
+          max_continuous_duration: 10800,
+          created_at: stream.created_at
+        };
 
         // REMOVED: No longer fetch from API - always use prop
         // The parent page (studio/page.tsx) already creates a unique stream per user
@@ -317,40 +321,31 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
             }
           }, 5000 * retryCount); // Exponential backoff
         } else {
-          // Final fallback: create a demo stream
-          console.warn('⚠️ All retries failed, creating demo stream');
-
-          if (isMounted) {
-            const demoStream: MuxLiveStream = {
-              id: `demo-stream-${Date.now()}`,
-              rtmp_server_url: 'rtmp://ingest.convertcast.com/app',
-              stream_key: `demo_key_${Math.random().toString(36).substring(2)}`,
-              playback_id: `demo-playback-${Math.random().toString(36).substring(2)}`,
-              status: 'idle',
-              max_continuous_duration: 10800,
-              created_at: new Date().toISOString()
-            };
-
-            setMuxStream(demoStream);
-            setRealRTMPCredentials({
-              server_url: demoStream.rtmp_server_url,
-              stream_key: demoStream.stream_key
-            });
-
-            // Update credentials for the credentials card
-            setStreamCredentials({
-              stream_key: demoStream.stream_key,
-              rtmp_server_url: demoStream.rtmp_server_url
-            });
-          }
+          // NO DEMO FALLBACK - Show clear error instead
+          console.error('❌ CRITICAL: All retries failed. Stream prop missing credentials.');
+          console.error('   Parent page MUST create stream with all Mux fields before loading StudioDashboard.');
+          console.error('   Stream prop received:', {
+            id: stream.id,
+            has_mux_stream_id: !!stream.mux_stream_id,
+            has_stream_key: !!stream.stream_key,
+            has_playback_id: !!stream.mux_playback_id
+          });
 
           analytics.trackError(error as Error, {
             type: 'streaming',
-            severity: retryCount >= maxRetries ? 'high' : 'medium',
-            context: 'mux_initialization_final_failure',
+            severity: 'critical',
+            context: 'mux_initialization_no_credentials',
             streamId: stream.id,
-            retryCount
+            retryCount,
+            missing_fields: {
+              mux_stream_id: !stream.mux_stream_id,
+              stream_key: !stream.stream_key,
+              mux_playback_id: !stream.mux_playback_id
+            }
           });
+
+          // Don't set demo credentials - let error state show
+          // User should refresh page to trigger new stream creation
         }
       }
     }

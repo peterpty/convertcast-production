@@ -1,8 +1,71 @@
 # ConvertCast Development Status
 
-**Last Updated:** 2025-10-05 (CRITICAL BUG FIX: User Stream Isolation)
-**Development Server:** http://localhost:3002
-**Production Status:** 🚨 CRITICAL FIX DEPLOYED - User Stream Isolation Fixed
+**Last Updated:** 2025-10-06 (CRITICAL: Video Preview Broken - NULL Playback ID)
+**Development Server:** http://localhost:3009
+**Production Status:** 🔧 IN PROGRESS - Debugging NULL playback_id issue
+
+---
+
+## 🔧 **CURRENT SESSION: 2025-10-06**
+
+### **⚠️ CRITICAL BUG: Video Preview Completely Broken**
+
+**DISCOVERED:** 2025-10-06
+**STATUS:** 🟡 IN PROGRESS - Fixed component error, investigating root cause
+
+#### **The Problem:**
+
+After removing demo mode fallback, video preview stopped working entirely:
+- Black screen with no video player
+- "Demo Mode" text still appearing (should be "Studio Preview")
+- `mux_playback_id` is NULL in database
+- StudioDashboard throwing error and failing to render
+
+#### **Root Cause Analysis:**
+
+1. **Database Issue:** `streams.mux_playback_id` is NULL for all streams
+2. **Component Error:** StudioDashboard required playback_id and threw error when NULL
+3. **Cascading Failure:** Error prevented entire LivePreview from rendering
+
+#### **Fixes Applied:**
+
+**Commit `123e571`:** Remove demo mode text
+- ✅ Changed "Demo Mode" → "Waiting for Connection" in LivePreview
+- ✅ Changed "Demo Mode" → "Waiting for Stream" in RightPanel
+- ✅ Changed "Demo Mode" → "Studio Preview" in StudioDashboard
+- ✅ Added detailed logging to Mux service to see raw API response
+
+**Commit `9d391a1`:** Allow studio to work without playback_id
+- ✅ Changed validation to only require `stream_key` and `mux_stream_id`
+- ✅ Made `playback_id` optional (can be NULL/empty)
+- ✅ Added warning when playback_id missing but continue anyway
+- ✅ LivePreview shows "Waiting for Connection" when no playback_id
+
+#### **Current Investigation:**
+
+**Question:** Why is `mux_playback_id` NULL in database?
+
+**Possible Causes:**
+1. Mux API not returning `playback_ids` array immediately
+2. Database INSERT failing to save playback_id
+3. Timing issue - playback_id generated async by Mux
+
+**Next Steps:**
+1. ✅ Fixed component to work without playback_id
+2. ⏳ User needs to delete old streams and test new stream creation
+3. ⏳ Check console logs for raw Mux API response
+4. ⏳ Verify if Mux returns playback_ids or generates them later
+
+**SQL Cleanup Required:**
+```sql
+DELETE FROM streams WHERE created_at < '2025-10-05 18:00:00+00'::timestamptz;
+```
+
+**Files Modified:**
+- `src/lib/streaming/muxProductionService.ts` - Added detailed logging
+- `src/components/studio/LivePreview.tsx` - Updated status text
+- `src/components/studio/RightPanel.tsx` - Updated status text
+- `src/components/studio/StudioDashboard.tsx` - Fixed validation logic
 
 ---
 

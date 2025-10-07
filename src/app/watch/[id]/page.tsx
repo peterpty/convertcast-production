@@ -942,22 +942,36 @@ export default function LiveViewerPage() {
                       }}
                       autoPlay="muted"
                       muted={isMuted}
-                      accentColor="#9f6aff"
-                      primaryColor="#9f6aff"
-                      secondaryColor="#a855f7"
-                      className="w-full h-full video-mobile-optimized live-locked-player"
+                      accentColor="transparent"
+                      primaryColor="rgba(255, 255, 255, 0.1)"
+                      secondaryColor="rgba(255, 255, 255, 0.2)"
+                      className="w-full h-full video-mobile-optimized live-locked-player live-only-controls"
                       style={{
                         borderRadius: isMobileView && orientation.isLandscape ? '0' : isMobileView ? '0' : '1rem',
                         '--controls': isMobileView ? 'none' : 'auto',
-                        '--media-object-fit': (isMobileView && orientation.isLandscape) ? 'cover' : 'contain', // Cover in landscape for fullscreen
+                        '--media-object-fit': (isMobileView && orientation.isLandscape) ? 'cover' : 'contain',
                         '--seek-backward-button': 'none',
                         '--seek-forward-button': 'none',
-                        '--time-range': isMobileView ? 'none' : 'auto',
+                        '--time-range': 'none', // Always hide progress bar for live streams
+                        '--play-button': 'none', // Hide play/pause button - always live
+                        '--duration-display': 'none', // Hide duration/time display
+                        '--live-button': 'none', // Hide redundant "LIVE" button (we have our own indicator)
                         width: '100%',
                         height: '100%',
+                      } as React.CSSProperties}
+                      onPlay={() => console.log('🔴 LIVE: Stream started playing')}
+                      onPause={(e) => {
+                        // Prevent pausing on live streams - immediately resume
+                        console.log('⚠️ LIVE: Pause blocked - resuming playback');
+                        const player = muxPlayerRef.current;
+                        if (player?.media) {
+                          setTimeout(() => {
+                            player.media.play().catch(err => {
+                              console.log('Auto-resume failed (expected if user-initiated):', err);
+                            });
+                          }, 100);
+                        }
                       }}
-                      onPlay={() => console.log('Stream started playing')}
-                      onPause={() => console.log('Stream paused')}
                       onError={(error) => console.error('Stream error:', error)}
                     />
                   ) : (

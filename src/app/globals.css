@@ -297,4 +297,76 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
+
+  /* Live-only controls: Hide play/pause, progress bar, time display */
+  .live-only-controls::part(play-button),
+  .live-only-controls::part(center-play-button),
+  .live-only-controls::part(time-range),
+  .live-only-controls::part(time-display),
+  .live-only-controls::part(duration-display),
+  .live-only-controls::part(current-time-display),
+  .live-only-controls::part(live-button),
+  .live-only-controls::part(seek-backward-button),
+  .live-only-controls::part(seek-forward-button) {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Hide big center play button overlay */
+  .live-only-controls::part(center),
+  .live-only-controls mux-player::part(center) {
+    pointer-events: none !important;
+  }
+
+  /* Disable click-to-pause on video itself */
+  .live-only-controls video {
+    pointer-events: none !important;
+  }
+
+  /* Re-enable pointer events on visible controls only */
+  .live-only-controls::part(mute-button),
+  .live-only-controls::part(volume-range),
+  .live-only-controls::part(fullscreen-button) {
+    pointer-events: auto !important;
+  }
+
+  /* Remove purple hover overlay on all MuxPlayer controls */
+  mux-player::part(play-button):hover,
+  mux-player::part(mute-button):hover,
+  mux-player::part(volume-range):hover,
+  mux-player::part(fullscreen-button):hover,
+  mux-player [role="button"]:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  /* Keep mute button visible but with subtle styling */
+  .live-only-controls::part(mute-button) {
+    display: block !important;
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    padding: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .live-only-controls::part(mute-button):hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    transform: scale(1.05);
+  }
+
+  /* Fullscreen button subtle styling */
+  .live-only-controls::part(fullscreen-button) {
+    background-color: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    padding: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .live-only-controls::part(fullscreen-button):hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    transform: scale(1.05);
+  }
 }

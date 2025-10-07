@@ -37,6 +37,8 @@ export function StreamCredentialsCard({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showRefreshConfirm, setShowRefreshConfirm] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshSuccess, setRefreshSuccess] = useState(false);
 
   // Debug: Log props when they change
   console.log('🔐 StreamCredentialsCard props:', {
@@ -62,9 +64,36 @@ export function StreamCredentialsCard({
   };
 
   const handleRefresh = async () => {
-    if (onRefreshKey) {
+    if (!onRefreshKey) return;
+
+    setRefreshError(null);
+    setRefreshSuccess(false);
+
+    try {
       await onRefreshKey();
-      setShowRefreshConfirm(false);
+
+      // Success!
+      setRefreshSuccess(true);
+
+      // Close modal after short delay to show success state
+      setTimeout(() => {
+        setShowRefreshConfirm(false);
+        // Keep success banner visible for longer
+        setTimeout(() => {
+          setRefreshSuccess(false);
+        }, 3000);
+      }, 1500);
+
+    } catch (error) {
+      // Show error to user
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh stream key';
+      setRefreshError(errorMessage);
+      console.error('❌ Stream key refresh failed:', error);
+
+      // Auto-hide error after 5 seconds
+      setTimeout(() => {
+        setRefreshError(null);
+      }, 5000);
     }
   };
 
@@ -105,6 +134,25 @@ export function StreamCredentialsCard({
           </div>
         )}
       </div>
+
+      {/* Success Banner (shown briefly after refresh) */}
+      <AnimatePresence>
+        {refreshSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <p className="text-green-200 text-sm font-medium">
+                Stream key refreshed! Update OBS with the new key.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {!hasCredentials ? (
         /* No Credentials State */
@@ -290,6 +338,30 @@ export function StreamCredentialsCard({
                 This will generate a new stream key. Your current key will <strong>stop working immediately</strong>.
                 You'll need to update OBS with the new key.
               </p>
+
+              {/* Error Alert */}
+              {refreshError && (
+                <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-red-200 text-sm font-medium">Refresh Failed</p>
+                      <p className="text-red-300 text-xs mt-1">{refreshError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Alert */}
+              {refreshSuccess && (
+                <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <p className="text-green-200 text-sm font-medium">Stream key refreshed successfully!</p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setShowRefreshConfirm(false)}

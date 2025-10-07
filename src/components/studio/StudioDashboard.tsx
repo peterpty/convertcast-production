@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { LeftPanel } from './LeftPanel';
 import { LivePreview } from './LivePreview';
 import { RightPanel } from './RightPanel';
@@ -465,7 +465,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
   };
 
   // Handle overlay trigger from RightPanel (simplified for poll/offer)
-  const handleOverlayTrigger = (overlayType: string, overlayData: any) => {
+  const handleOverlayTrigger = useCallback((overlayType: string, overlayData: any) => {
     console.log('🎯 Overlay triggered:', overlayType, overlayData);
 
     let stateUpdate: Partial<OverlayState> = {};
@@ -511,7 +511,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
       broadcastOverlay(overlayType, overlayData);
       console.log('✅ Overlay broadcasted to viewers:', overlayType);
     }
-  };
+  }, [overlayState, connected, broadcastOverlay]);
 
   // Handle EngageMax interactions
   const handleEngageMaxAction = (action: string, data: any) => {
@@ -595,7 +595,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
   ]);
 
   // Handle stream key refresh
-  const handleRefreshStreamKey = async () => {
+  const handleRefreshStreamKey = useCallback(async () => {
     try {
       setIsRefreshingKey(true);
       console.log('🔄 Refreshing stream key for stream:', stream.id);
@@ -644,7 +644,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     } finally {
       setIsRefreshingKey(false);
     }
-  };
+  }, [stream.id, analytics]);
 
   return (
     <ErrorBoundary

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LeftPanel } from './LeftPanel';
 import { LivePreview } from './LivePreview';
 import { RightPanel } from './RightPanel';
@@ -574,6 +574,26 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     }
   };
 
+  // Memoize stream object to prevent unnecessary RightPanel re-renders
+  const memoizedStream = useMemo(() => ({
+    id: stream.id,
+    mux_playback_id: muxStream?.playback_id || stream.mux_playback_id,
+    stream_key: streamCredentials.stream_key,
+    rtmp_server_url: streamCredentials.rtmp_server_url,
+    events: {
+      title: stream.events.title,
+      status: stream.events.status
+    }
+  }), [
+    stream.id,
+    muxStream?.playback_id,
+    stream.mux_playback_id,
+    streamCredentials.stream_key,
+    streamCredentials.rtmp_server_url,
+    stream.events.title,
+    stream.events.status
+  ]);
+
   // Handle stream key refresh
   const handleRefreshStreamKey = async () => {
     try {
@@ -735,16 +755,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
               streamId={muxStream?.playback_id || stream.mux_playback_id || stream.id}
               socket={socket}
               connected={connected}
-              stream={{
-                id: stream.id,
-                mux_playback_id: muxStream?.playback_id || stream.mux_playback_id,
-                stream_key: streamCredentials.stream_key,
-                rtmp_server_url: streamCredentials.rtmp_server_url,
-                events: {
-                  title: stream.events.title,
-                  status: stream.events.status
-                }
-              }}
+              stream={memoizedStream}
               onOverlayTrigger={handleOverlayTrigger}
               onRefreshStreamKey={handleRefreshStreamKey}
               isRefreshingKey={isRefreshingKey}

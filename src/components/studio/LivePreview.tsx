@@ -27,6 +27,7 @@ interface OverlayState {
     buttonText: string;
     urgency: boolean;
     position: 'top-center' | 'bottom-center' | 'side';
+    link?: string;
   };
   socialProof: {
     visible: boolean;

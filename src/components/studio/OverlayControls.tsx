@@ -24,6 +24,7 @@ interface OverlayState {
     buttonText: string;
     urgency: boolean;
     position: 'top-center' | 'bottom-center' | 'side';
+    link?: string;
   };
   socialProof: {
     visible: boolean;
@@ -321,6 +322,25 @@ export function OverlayControls({ overlayState, onUpdate, connected = true, conn
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:border-purple-500"
                 placeholder="Button text"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Link URL (Optional)
+                <span className="text-gray-400 text-xs ml-2">Viewers can click to visit</span>
+              </label>
+              <input
+                type="url"
+                value={overlayState.registrationCTA.link || ''}
+                onChange={(e) => onUpdate({
+                  registrationCTA: { ...overlayState.registrationCTA, link: e.target.value }
+                })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:border-purple-500"
+                placeholder="https://example.com or example.com"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                💡 Tip: Enter a registration page, product link, or any URL
+              </p>
             </div>
 
             <div className="flex items-center justify-between">

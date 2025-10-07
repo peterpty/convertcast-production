@@ -235,8 +235,9 @@ export default function LiveViewerPage() {
       headline: overlayData.overlayData?.headline || '',
       buttonText: overlayData.overlayData?.buttonText || '',
       urgency: overlayData.overlayData?.urgency || false,
-      position: overlayData.overlayData?.position || 'bottom-center' as const
-    } : { visible: false, headline: '', buttonText: '', urgency: false, position: 'bottom-center' as const },
+      position: overlayData.overlayData?.position || 'bottom-center' as const,
+      link: overlayData.overlayData?.link || ''
+    } : { visible: false, headline: '', buttonText: '', urgency: false, position: 'bottom-center' as const, link: '' },
     socialProof: overlayData.overlayType === 'socialProof' ? {
       visible: overlayData.overlayData?.visible !== false,
       type: overlayData.overlayData?.type || 'viewer-count' as const,

@@ -28,6 +28,7 @@ interface OverlayState {
     buttonText: string;
     urgency: boolean;
     position: 'top-center' | 'bottom-center' | 'side';
+    link?: string;
   };
   socialProof: {
     visible: boolean;
@@ -73,7 +74,8 @@ const initialOverlayState: any = {
     headline: 'Register Now for Exclusive Access',
     buttonText: 'Get Free Access',
     urgency: false,
-    position: 'bottom-center'
+    position: 'bottom-center',
+    link: ''
   },
   socialProof: {
     visible: false,

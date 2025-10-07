@@ -23,6 +23,7 @@ interface OverlayState {
     buttonText: string;
     urgency: boolean;
     position: 'top-center' | 'bottom-center' | 'side';
+    link?: string;
   };
   socialProof: {
     visible: boolean;
@@ -189,61 +190,78 @@ export function OverlayRenderer({ overlayState, viewerCount, streamId, connected
 
       {/* Registration CTA - Instagram Style */}
       {overlayState.registrationCTA.visible && (
-        <div className={`absolute ${getPositionClasses(overlayState.registrationCTA.position)} pointer-events-auto animate-bounce-in`}>
-          <div className={`relative px-8 py-6 rounded-3xl backdrop-blur-xl shadow-2xl transform hover:scale-105 transition-all duration-500 cursor-pointer group ${
-            overlayState.registrationCTA.urgency
-              ? 'bg-gradient-to-r from-red-500/20 via-pink-500/20 to-orange-500/20 border border-red-300/50'
-              : 'bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-green-500/20 border border-white/30'
-          }`}
-          style={{
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-          }}>
-            {/* Floating glow effect */}
-            <div className={`absolute inset-0 rounded-3xl ${
+        // Outer div: handles positioning only (no transform conflicts)
+        <div className={`absolute ${getPositionClasses(overlayState.registrationCTA.position)} pointer-events-auto`}>
+          {/* Inner div: handles animation */}
+          <div
+            className="animate-bounce-in"
+            onClick={() => {
+              if (overlayState.registrationCTA.link) {
+                // Validate and open link
+                let url = overlayState.registrationCTA.link.trim();
+                // Add https:// if no protocol specified
+                if (!url.match(/^https?:\/\//i)) {
+                  url = 'https://' + url;
+                }
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }
+            }}
+          >
+            <div className={`relative px-8 py-6 rounded-3xl backdrop-blur-xl shadow-2xl transform hover:scale-105 transition-all duration-500 ${overlayState.registrationCTA.link ? 'cursor-pointer' : 'cursor-default'} group ${
               overlayState.registrationCTA.urgency
-                ? 'bg-gradient-to-r from-red-400/20 to-orange-400/20'
-                : 'bg-gradient-to-r from-purple-400/20 to-blue-400/20'
-            } ${overlayState.registrationCTA.urgency ? 'animate-pulse' : 'group-hover:animate-pulse'}`}></div>
-
-            <div className="relative z-10">
-              <div className="text-white font-bold text-xl mb-4 text-center drop-shadow-lg tracking-wide"
-                   style={{ fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}>
-                {overlayState.registrationCTA.headline}
-              </div>
-
-              {/* Pill-shaped button */}
-              <div className={`relative overflow-hidden rounded-full px-8 py-4 text-center transform transition-all duration-300 group-hover:scale-105 ${
+                ? 'bg-gradient-to-r from-red-500/20 via-pink-500/20 to-orange-500/20 border border-red-300/50'
+                : 'bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-green-500/20 border border-white/30'
+            }`}
+            style={{
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}>
+              {/* Floating glow effect */}
+              <div className={`absolute inset-0 rounded-3xl ${
                 overlayState.registrationCTA.urgency
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500'
-              }`}>
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 group-hover:animate-shimmer"></div>
+                  ? 'bg-gradient-to-r from-red-400/20 to-orange-400/20'
+                  : 'bg-gradient-to-r from-purple-400/20 to-blue-400/20'
+              } ${overlayState.registrationCTA.urgency ? 'animate-pulse' : 'group-hover:animate-pulse'}`}></div>
 
-                <span className="relative text-white font-bold text-lg drop-shadow-md tracking-wide"
-                      style={{ fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}>
-                  {overlayState.registrationCTA.buttonText}
-                </span>
-
-                {/* Micro-animation sparkles */}
-                <div className="absolute top-1 right-3">
-                  <div className="w-1 h-1 bg-white/80 rounded-full animate-ping"></div>
+              <div className="relative z-10">
+                <div className="text-white font-bold text-xl mb-4 text-center drop-shadow-lg tracking-wide"
+                     style={{ fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}>
+                  {overlayState.registrationCTA.headline}
                 </div>
-                <div className="absolute bottom-1 left-3">
-                  <div className="w-1 h-1 bg-white/60 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
-                </div>
-              </div>
 
-              {overlayState.registrationCTA.urgency && (
-                <div className="text-center mt-3 animate-bounce">
-                  <div className="inline-flex items-center space-x-1 px-3 py-1 bg-yellow-500/20 rounded-full border border-yellow-300/30">
-                    <span className="text-yellow-200 text-sm font-bold">⚡</span>
-                    <span className="text-yellow-200 text-sm font-bold tracking-wide">LIMITED TIME</span>
-                    <span className="text-yellow-200 text-sm font-bold">⚡</span>
+                {/* Pill-shaped button */}
+                <div className={`relative overflow-hidden rounded-full px-8 py-4 text-center transform transition-all duration-300 group-hover:scale-105 ${
+                  overlayState.registrationCTA.urgency
+                    ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                }`}>
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 group-hover:animate-shimmer"></div>
+
+                  <span className="relative text-white font-bold text-lg drop-shadow-md tracking-wide"
+                        style={{ fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}>
+                    {overlayState.registrationCTA.buttonText}
+                  </span>
+
+                  {/* Micro-animation sparkles */}
+                  <div className="absolute top-1 right-3">
+                    <div className="w-1 h-1 bg-white/80 rounded-full animate-ping"></div>
+                  </div>
+                  <div className="absolute bottom-1 left-3">
+                    <div className="w-1 h-1 bg-white/60 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
                   </div>
                 </div>
-              )}
+
+                {overlayState.registrationCTA.urgency && (
+                  <div className="text-center mt-3 animate-bounce">
+                    <div className="inline-flex items-center space-x-1 px-3 py-1 bg-yellow-500/20 rounded-full border border-yellow-300/30">
+                      <span className="text-yellow-200 text-sm font-bold">⚡</span>
+                      <span className="text-yellow-200 text-sm font-bold tracking-wide">LIMITED TIME</span>
+                      <span className="text-yellow-200 text-sm font-bold">⚡</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

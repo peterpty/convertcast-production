@@ -46,6 +46,7 @@ interface OverlayState {
     buttonText: string;
     urgency: boolean;
     position: 'top-center' | 'bottom-center' | 'side';
+    link?: string;
   };
 
   // Social Proof
@@ -101,7 +102,8 @@ const initialOverlayState: OverlayState = {
     headline: 'Register Now for Exclusive Access',
     buttonText: 'Get Free Access',
     urgency: false,
-    position: 'bottom-center'
+    position: 'bottom-center',
+    link: ''
   },
   socialProof: {
     visible: false,

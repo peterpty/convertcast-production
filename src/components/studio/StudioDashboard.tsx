@@ -387,6 +387,70 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     return () => clearInterval(cleanup);
   }, []);
 
+  // Memoize WebSocket callbacks to prevent config object recreation
+  const onViewerCountUpdate = useCallback((count: number) => {
+    setViewerCount(count);
+  }, []);
+
+  const onOverlayUpdate = useCallback((data: any) => {
+    setOverlayState(prev => ({ ...prev, ...data.overlayData }));
+  }, []);
+
+  const onViewerReaction = useCallback((reaction: any) => {
+    console.log('📡 Studio received viewer reaction:', reaction);
+
+    const emojiMap: { [key: string]: string } = {
+      heart: '❤️',
+      laugh: '😂',
+      wow: '😮',
+      sad: '😢',
+      clap: '👏',
+      fire: '🔥',
+      hundred: '💯',
+      rocket: '🚀',
+      thumbs: '👍',
+      star: '⭐',
+      love: '😍',
+      cool: '😎',
+      party: '🎉',
+      mind: '🤯'
+    };
+
+    const emoji = emojiMap[reaction.reactionType] || '❤️';
+    const newReaction = {
+      id: `studio-${Date.now()}-${Math.random()}`,
+      emoji,
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 80 + 10,
+      timestamp: Date.now()
+    };
+
+    console.log('✨ Adding reaction to studio preview:', newReaction);
+    setFloatingReactions(prev => [...prev, newReaction].slice(-20));
+  }, []);
+
+  const onWebSocketError = useCallback((error: string) => {
+    console.error('Studio WebSocket error:', error);
+  }, []);
+
+  // Memoize WebSocket config to prevent broadcastOverlay recreation
+  const websocketConfig = useMemo(() => ({
+    streamId: muxStream?.playback_id || stream.mux_playback_id || stream.id,
+    userType: 'streamer' as const,
+    onViewerCountUpdate,
+    onOverlayUpdate,
+    onViewerReaction,
+    onError: onWebSocketError
+  }), [
+    muxStream?.playback_id,
+    stream.mux_playback_id,
+    stream.id,
+    onViewerCountUpdate,
+    onOverlayUpdate,
+    onViewerReaction,
+    onWebSocketError
+  ]);
+
   // Smart WebSocket connection with automatic fallback
   const {
     socket,
@@ -398,53 +462,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
     emit,
     eventLog,
     websocketUrl
-  } = useWebSocket({
-    streamId: muxStream?.playback_id || stream.mux_playback_id || stream.id,
-    userType: 'streamer',
-    onViewerCountUpdate: (count: number) => setViewerCount(count),
-    onOverlayUpdate: (data: any) => {
-      // Handle overlay updates from other streamers (if any)
-      setOverlayState(prev => ({ ...prev, ...data.overlayData }));
-    },
-    onViewerReaction: (reaction: any) => {
-      console.log('📡 Studio received viewer reaction:', reaction);
-
-      // Unified emoji map (matches viewer side)
-      const emojiMap: { [key: string]: string } = {
-        heart: '❤️',
-        laugh: '😂',
-        wow: '😮',
-        sad: '😢',
-        clap: '👏',
-        fire: '🔥',
-        hundred: '💯',
-        rocket: '🚀',
-        thumbs: '👍',
-        star: '⭐',
-        love: '😍',
-        cool: '😎',
-        party: '🎉',
-        mind: '🤯'
-      };
-
-      const emoji = emojiMap[reaction.reactionType] || '❤️';
-
-      // Add floating reaction to studio preview
-      const newReaction = {
-        id: `studio-${Date.now()}-${Math.random()}`,
-        emoji,
-        x: Math.random() * 80 + 10,
-        y: Math.random() * 80 + 10,
-        timestamp: Date.now()
-      };
-
-      console.log('✨ Adding reaction to studio preview:', newReaction);
-      setFloatingReactions(prev => [...prev, newReaction].slice(-20));
-    },
-    onError: (error: string) => {
-      console.error('Studio WebSocket error:', error);
-    }
-  });
+  } = useWebSocket(websocketConfig);
 
   // Broadcast overlay changes to OBS and viewers
   const updateOverlay = (updates: Partial<OverlayState>) => {

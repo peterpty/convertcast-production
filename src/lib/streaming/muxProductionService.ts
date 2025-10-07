@@ -89,6 +89,7 @@ export class MuxProductionService {
     try {
       const liveStream = await this.mux.video.liveStreams.create({
         playback_policy: 'public',
+        latency_mode: 'low', // Enable low-latency mode (2-6s delay vs 10-30s standard)
         new_asset_settings: {
           playback_policy: 'public'
         },

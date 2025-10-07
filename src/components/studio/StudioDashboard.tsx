@@ -468,50 +468,50 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
   const handleOverlayTrigger = useCallback((overlayType: string, overlayData: any) => {
     console.log('🎯 Overlay triggered:', overlayType, overlayData);
 
-    let stateUpdate: Partial<OverlayState> = {};
-
-    // Map overlay types to OverlayState structure
-    if (overlayType === 'poll') {
-      stateUpdate = {
-        engageMax: {
-          ...overlayState.engageMax,
-          currentPoll: {
-            id: overlayData.id || null,
-            question: overlayData.question || '',
-            options: overlayData.options || [],
-            visible: overlayData.active !== false
+    // Update local state for Studio preview using functional setState
+    // This avoids reading from overlayState, so we don't need it in dependencies
+    setOverlayState(prev => {
+      if (overlayType === 'poll') {
+        return {
+          ...prev,
+          engageMax: {
+            ...prev.engageMax,
+            currentPoll: {
+              id: overlayData.id || null,
+              question: overlayData.question || '',
+              options: overlayData.options || [],
+              visible: overlayData.active !== false
+            }
           }
-        }
-      };
-    } else if (overlayType === 'offer') {
-      stateUpdate = {
-        engageMax: {
-          ...overlayState.engageMax,
-          smartCTA: {
-            visible: overlayData.active !== false,
-            message: overlayData.description || overlayData.title || '',
-            action: 'register',
-            trigger: 'manual'
+        };
+      } else if (overlayType === 'offer') {
+        return {
+          ...prev,
+          engageMax: {
+            ...prev.engageMax,
+            smartCTA: {
+              visible: overlayData.active !== false,
+              message: overlayData.description || overlayData.title || '',
+              action: 'register',
+              trigger: 'manual'
+            }
           }
-        }
-      };
-    } else {
-      // Generic overlay update
-      stateUpdate = { [overlayType]: overlayData };
-    }
-
-    // Update local state for Studio preview
-    setOverlayState(prev => ({
-      ...prev,
-      ...stateUpdate
-    }));
+        };
+      } else {
+        // Generic overlay update
+        return {
+          ...prev,
+          [overlayType]: overlayData
+        };
+      }
+    });
 
     // Broadcast to viewers via WebSocket
     if (connected) {
       broadcastOverlay(overlayType, overlayData);
       console.log('✅ Overlay broadcasted to viewers:', overlayType);
     }
-  }, [overlayState, connected, broadcastOverlay]);
+  }, [connected, broadcastOverlay]);
 
   // Handle EngageMax interactions
   const handleEngageMaxAction = (action: string, data: any) => {

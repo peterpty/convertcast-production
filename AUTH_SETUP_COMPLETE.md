@@ -316,8 +316,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<your-service-key>
 
 # Mux (already configured)
-MUX_TOKEN_ID=c2e98f13-d734-4103-a17d-e0634dbee684
-MUX_TOKEN_SECRET=<your-mux-secret>
+MUX_TOKEN_ID=<configured>
+MUX_TOKEN_SECRET=<configured>
 ```
 
 ---

@@ -79,7 +79,7 @@ ws.convertcast.app (WebSocket Server)
 
 | Variable | Development | Production |
 |----------|-------------|------------|
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:3002` | `https://convertcast.app` |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3009` | `https://convertcast.app` |
 | `NEXT_PUBLIC_WEBSOCKET_URL` | `http://localhost:3003` | `wss://ws.convertcast.app` |
 | `NODE_ENV` | `development` | `production` |
 

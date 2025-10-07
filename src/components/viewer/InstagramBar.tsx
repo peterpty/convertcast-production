@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, FormEvent, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Lock, Unlock, Share2, MoreVertical, Send } from 'lucide-react';
 import { useOrientation } from '@/hooks/useOrientation';
@@ -32,12 +32,34 @@ const ChatInput = memo(({
   isLandscape: boolean;
   connected: boolean;
 }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wasFocusedRef = useRef(false);
+
+  // CRITICAL FIX: Restore focus after re-renders
+  useEffect(() => {
+    if (wasFocusedRef.current && inputRef.current && document.activeElement !== inputRef.current) {
+      // Input was focused before re-render but lost focus - restore it
+      inputRef.current.focus();
+    }
+  });
+
+  const handleFocus = () => {
+    wasFocusedRef.current = true;
+  };
+
+  const handleBlur = () => {
+    wasFocusedRef.current = false;
+  };
+
   return (
     <form onSubmit={onSubmit} className="flex-1 relative">
       <input
+        ref={inputRef}
         type="text"
         value={message}
         onChange={(e) => onMessageChange(e.target.value)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         placeholder={isPrivate ? "Private message..." : "Add a comment..."}
         disabled={!connected}
         autoComplete="off"

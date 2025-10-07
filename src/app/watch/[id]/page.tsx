@@ -412,7 +412,18 @@ export default function LiveViewerPage() {
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = Date.now();
-      setFloatingReactions(prev => prev.filter(reaction => now - reaction.timestamp < 10000));
+
+      // CRITICAL FIX: Only update state if there are reactions to remove
+      // Prevents unnecessary re-renders that break input focus
+      setFloatingReactions(prev => {
+        const filtered = prev.filter(reaction => now - reaction.timestamp < 10000);
+
+        // Only return new array if length changed (avoid unnecessary re-render)
+        if (filtered.length !== prev.length) {
+          return filtered;
+        }
+        return prev; // Return same reference = no re-render
+      });
     }, 1000);
 
     return () => clearInterval(cleanup);

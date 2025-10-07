@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface KeyboardState {
   isOpen: boolean;
@@ -12,6 +12,10 @@ export function useKeyboardDetection(): KeyboardState {
     isOpen: false,
     height: 0,
   });
+
+  // Track previous state to prevent unnecessary updates
+  const prevStateRef = useRef<KeyboardState>(keyboardState);
+  const updateTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -29,10 +33,28 @@ export function useKeyboardDetection(): KeyboardState {
       const isKeyboardOpen = viewportHeight < windowHeight * 0.75;
       const keyboardHeight = isKeyboardOpen ? windowHeight - viewportHeight : 0;
 
-      setKeyboardState({
+      const newState: KeyboardState = {
         isOpen: isKeyboardOpen,
         height: keyboardHeight,
-      });
+      };
+
+      // CRITICAL FIX: Only update state if values actually changed
+      // Round height to prevent minor pixel differences from causing updates
+      const prevState = prevStateRef.current;
+      const heightDiff = Math.abs(prevState.height - newState.height);
+
+      if (prevState.isOpen !== newState.isOpen || heightDiff > 10) {
+        // Clear any pending update
+        if (updateTimerRef.current) {
+          clearTimeout(updateTimerRef.current);
+        }
+
+        // Debounce state updates slightly to prevent rapid changes during animation
+        updateTimerRef.current = setTimeout(() => {
+          prevStateRef.current = newState;
+          setKeyboardState(newState);
+        }, 50);
+      }
     };
 
     // Fallback for browsers without visualViewport API
@@ -46,10 +68,25 @@ export function useKeyboardDetection(): KeyboardState {
       const isKeyboardOpen = currentHeight < screenHeight * 0.6;
       const keyboardHeight = isKeyboardOpen ? screenHeight - currentHeight : 0;
 
-      setKeyboardState({
+      const newState: KeyboardState = {
         isOpen: isKeyboardOpen,
         height: keyboardHeight,
-      });
+      };
+
+      // Only update if changed
+      const prevState = prevStateRef.current;
+      const heightDiff = Math.abs(prevState.height - newState.height);
+
+      if (prevState.isOpen !== newState.isOpen || heightDiff > 10) {
+        if (updateTimerRef.current) {
+          clearTimeout(updateTimerRef.current);
+        }
+
+        updateTimerRef.current = setTimeout(() => {
+          prevStateRef.current = newState;
+          setKeyboardState(newState);
+        }, 50);
+      }
     };
 
     // Use visualViewport API if available (modern browsers)
@@ -61,6 +98,9 @@ export function useKeyboardDetection(): KeyboardState {
       handleViewportResize();
 
       return () => {
+        if (updateTimerRef.current) {
+          clearTimeout(updateTimerRef.current);
+        }
         if (window.visualViewport) {
           window.visualViewport.removeEventListener('resize', handleViewportResize);
           window.visualViewport.removeEventListener('scroll', handleViewportResize);
@@ -74,6 +114,9 @@ export function useKeyboardDetection(): KeyboardState {
       handleWindowResize();
 
       return () => {
+        if (updateTimerRef.current) {
+          clearTimeout(updateTimerRef.current);
+        }
         window.removeEventListener('resize', handleWindowResize);
       };
     }

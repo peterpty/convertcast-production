@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface MobileDetectionState {
   isMobile: boolean;
@@ -14,6 +14,10 @@ export function useMobileDetection(): MobileDetectionState {
     isTouch: false,
     screenSize: 'desktop',
   });
+
+  // Track previous state to prevent unnecessary updates
+  const prevStateRef = useRef<MobileDetectionState>(state);
+  const resizeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const detectMobile = () => {
@@ -53,32 +57,58 @@ export function useMobileDetection(): MobileDetectionState {
         screenSize = 'desktop';
       }
 
-      setState({
+      const newState: MobileDetectionState = {
         isMobile,
         isTouch,
         screenSize,
-      });
+      };
 
-      console.log('📱 Mobile Detection:', {
-        isMobile,
-        isTouch,
-        screenSize,
-        minDimension,
-        maxDimension,
-        userAgent: isMobileUA,
-        hasCoarsePointer,
-      });
+      // CRITICAL FIX: Only update state if values actually changed
+      // This prevents re-renders from keyboard opening/closing
+      const prevState = prevStateRef.current;
+      if (
+        prevState.isMobile !== newState.isMobile ||
+        prevState.isTouch !== newState.isTouch ||
+        prevState.screenSize !== newState.screenSize
+      ) {
+        console.log('📱 Mobile Detection Changed:', {
+          from: prevState,
+          to: newState,
+          minDimension,
+          maxDimension,
+          userAgent: isMobileUA,
+          hasCoarsePointer,
+        });
+
+        prevStateRef.current = newState;
+        setState(newState);
+      }
+    };
+
+    // Debounced resize handler to prevent rapid re-renders during keyboard animation
+    const handleResize = () => {
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+      }
+
+      // Debounce resize events by 150ms
+      resizeTimerRef.current = setTimeout(() => {
+        detectMobile();
+      }, 150);
     };
 
     // Initial detection
     detectMobile();
 
-    // Re-detect on resize (but state should remain consistent due to logic)
-    window.addEventListener('resize', detectMobile);
-    window.addEventListener('orientationchange', detectMobile);
+    // Re-detect on resize with debouncing
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', detectMobile); // No debounce for orientation change
 
     return () => {
-      window.removeEventListener('resize', detectMobile);
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+      }
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', detectMobile);
     };
   }, []);

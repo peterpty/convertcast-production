@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { Socket } from 'socket.io-client';
 import { Lock, Unlock } from 'lucide-react';
 import { ChatService } from '@/lib/supabase/chatService';
@@ -60,7 +60,7 @@ interface RightPanelProps {
   isRefreshingKey?: boolean;
 }
 
-export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigger, onRefreshStreamKey, isRefreshingKey = false }: RightPanelProps) {
+function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTrigger, onRefreshStreamKey, isRefreshingKey = false }: RightPanelProps) {
   // Debug: Log stream prop
   console.log('🎛️ RightPanel stream prop:', {
     streamId,
@@ -981,3 +981,5 @@ export function RightPanel({ streamId, socket, connected, stream, onOverlayTrigg
     </div>
   );
 }
+
+export const RightPanel = memo(RightPanelComponent);

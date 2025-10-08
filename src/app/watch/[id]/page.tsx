@@ -102,7 +102,7 @@ export default function LiveViewerPage() {
   // Mobile-specific state
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); // Start unmuted
+  const [isMuted, setIsMuted] = useState(true); // Start muted (matches autoPlay="muted" for browser policy)
 
   // Use robust mobile detection that survives rotation
   const isMobileView = isMobileDevice;
@@ -693,10 +693,8 @@ export default function LiveViewerPage() {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
 
-    // Also update MuxPlayer directly if ref exists
-    if (muxPlayerRef.current?.media) {
-      muxPlayerRef.current.media.muted = newMutedState;
-    }
+    // Let MuxPlayer handle mute state via muted={isMuted} prop
+    // Removed direct DOM manipulation to prevent audio buffer conflicts
 
     // Haptic feedback
     if (navigator.vibrate) {

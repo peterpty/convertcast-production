@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, memo } from 'react';
 import { Socket } from 'socket.io-client';
-import { Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock, Pin, PinOff } from 'lucide-react';
 import { ChatService } from '@/lib/supabase/chatService';
 import { HotLeadPanel } from '@/components/ai/HotLeadPanel';
 import { AILiveChat } from '@/components/ai/AILiveChat';
@@ -23,6 +23,7 @@ interface ChatMessage {
   is_synthetic?: boolean;
   is_private?: boolean;
   sender_id?: string;
+  status?: 'active' | 'removed' | 'deleted' | 'pinned' | 'synthetic';
   intent_signals?: {
     buying_intent: number;
     engagement_score: number;
@@ -282,7 +283,8 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
       if (!streamId) return;
 
       console.log('📜 Streamer: Loading chat history...');
-      const messages = await ChatService.getMessages(streamId, 50);
+      // Pass null for currentUserId and isHost=true so host sees ALL messages (public + all private)
+      const messages = await ChatService.getMessages(streamId, 50, null, true);
 
       if (messages.length > 0) {
         console.log(`✅ Streamer: Loaded ${messages.length} messages`);
@@ -292,6 +294,9 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
           message: msg.message,
           timestamp: msg.created_at,
           is_synthetic: msg.is_synthetic,
+          is_private: msg.is_private,
+          sender_id: msg.sender_id,
+          status: msg.status,
           intent_signals: msg.intent_signals
         }));
         setMessages(formatted);
@@ -315,6 +320,9 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
         message: message.message,
         timestamp: message.created_at,
         is_synthetic: message.is_synthetic,
+        is_private: message.is_private,
+        sender_id: message.sender_id,
+        status: message.status,
         intent_signals: message.intent_signals
       };
 
@@ -398,6 +406,43 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
 
       setNewMessage('');
       setIsPrivateMessage(false); // Reset to public after sending
+    }
+  };
+
+  // Pin/unpin message handler
+  const handlePinMessage = async (messageId: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    const isPinned = message.status === 'pinned';
+
+    if (isPinned) {
+      // Unpin message - set status back to active
+      const success = await ChatService.unpinMessage(messageId);
+      if (success) {
+        setMessages(prev => prev.map(m =>
+          m.id === messageId ? { ...m, status: 'active' } : m
+        ));
+        console.log('✅ Message unpinned');
+      }
+    } else {
+      // Pin message - first unpin any currently pinned message (only one can be pinned)
+      const currentlyPinned = messages.find(m => m.status === 'pinned');
+      if (currentlyPinned) {
+        await ChatService.unpinMessage(currentlyPinned.id);
+        setMessages(prev => prev.map(m =>
+          m.id === currentlyPinned.id ? { ...m, status: 'active' } : m
+        ));
+      }
+
+      // Now pin the selected message
+      const success = await ChatService.pinMessage(messageId);
+      if (success) {
+        setMessages(prev => prev.map(m =>
+          m.id === messageId ? { ...m, status: 'pinned' } : m
+        ));
+        console.log('✅ Message pinned');
+      }
     }
   };
 
@@ -761,6 +806,12 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
                           Private
                         </span>
                       )}
+                      {message.status === 'pinned' && (
+                        <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                          <Pin className="w-3 h-3" />
+                          Pinned
+                        </span>
+                      )}
                       {message.intent_signals && message.intent_signals.buying_intent > 0.8 && (
                         <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">
                           🔥 HOT
@@ -772,9 +823,24 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
                         </span>
                       )}
                     </div>
-                    <span className="text-gray-400 text-xs">
-                      {formatTime(message.timestamp)}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handlePinMessage(message.id)}
+                        className={`p-1 rounded hover:bg-gray-700 transition-colors ${
+                          message.status === 'pinned' ? 'text-yellow-400' : 'text-gray-400'
+                        }`}
+                        title={message.status === 'pinned' ? 'Unpin message' : 'Pin message to stream'}
+                      >
+                        {message.status === 'pinned' ? (
+                          <PinOff className="w-4 h-4" />
+                        ) : (
+                          <Pin className="w-4 h-4" />
+                        )}
+                      </button>
+                      <span className="text-gray-400 text-xs">
+                        {formatTime(message.timestamp)}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-gray-200 text-sm">{message.message}</p>
                   

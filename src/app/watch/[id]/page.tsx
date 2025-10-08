@@ -593,11 +593,27 @@ export default function LiveViewerPage() {
   };
 
   // Memoized callbacks for InstagramBar to prevent re-renders
-  const handleInstagramSendMessage = useCallback((message: string, isPrivate: boolean) => {
+  const handleInstagramSendMessage = useCallback(async (message: string, isPrivate: boolean) => {
+    if (!message.trim() || !streamId) return;
+
+    // CRITICAL: Save message directly to database with is_private and sender_id
+    // This ensures messages persist with correct privacy settings
+    await ChatService.saveMessage(
+      streamId,
+      message.trim(),
+      viewerId, // username
+      null, // viewer_profile_id (we could add later if auth is added)
+      false, // is_synthetic
+      null, // intent_signals
+      isPrivate, // is_private flag
+      viewerId // sender_id
+    );
+
+    // Also broadcast via WebSocket for real-time display (if connected)
     if (connected) {
       sendChatMessage(message, viewerId, isPrivate);
     }
-  }, [connected, sendChatMessage, viewerId]);
+  }, [connected, sendChatMessage, viewerId, streamId]);
 
   const handleInstagramReaction = useCallback(() => {
     handleReaction('heart');

@@ -253,6 +253,30 @@ export class ChatService {
   }
 
   /**
+   * Unpin a chat message
+   * @param messageId - The message ID to unpin
+   */
+  static async unpinMessage(messageId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ status: 'active' })
+        .eq('id', messageId);
+
+      if (error) {
+        console.error('❌ Failed to unpin message:', error);
+        return false;
+      }
+
+      console.log('✅ Message unpinned:', messageId);
+      return true;
+    } catch (error) {
+      console.error('❌ Error unpinning message:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get message statistics for a stream
    * @param streamId - The stream ID
    */

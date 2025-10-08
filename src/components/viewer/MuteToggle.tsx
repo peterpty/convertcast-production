@@ -14,11 +14,12 @@ export function MuteToggle({ isMuted, onToggle, className = '' }: MuteToggleProp
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={onToggle}
-      className={`fixed top-20 right-4 z-[60] w-12 h-12 rounded-full
-        bg-black/60 backdrop-blur-xl border border-white/20
+      className={`fixed bottom-20 right-4 z-[70] w-14 h-14 rounded-full
+        bg-white/10 backdrop-blur-2xl border-2 border-white/20
         flex items-center justify-center
-        hover:bg-black/80 active:bg-black/90
+        hover:bg-white/15 active:bg-white/20
         transition-all shadow-2xl
+        shadow-[0_0_30px_rgba(255,255,255,0.1)]
         ${className}`}
       aria-label={isMuted ? 'Unmute' : 'Mute'}
     >

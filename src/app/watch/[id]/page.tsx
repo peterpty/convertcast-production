@@ -863,8 +863,7 @@ export default function LiveViewerPage() {
       error={websocketError}
       isStudio={false}
     >
-      {/* Landscape Lock: Show rotate prompt on mobile in portrait mode */}
-      {isMobileDevice && <RotateScreen />}
+      {/* Rotation prompt removed - allow both portrait and landscape */}
 
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950">
         {/* Header - Hidden on Mobile Landscape for Immersive View */}
@@ -1034,55 +1033,12 @@ export default function LiveViewerPage() {
                     </div>
                   )}
 
-                  {/* Auto-hide Controls - Mobile Landscape Only */}
-                  {isMobileView && orientation.isLandscape && (
-                    <AnimatePresence>
-                      {controlsAutoHide.isVisible && (
-                        <>
-                          {/* Mute Toggle */}
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <MuteToggle
-                              isMuted={isMuted}
-                              onToggle={toggleMute}
-                            />
-                          </motion.div>
-
-                          {/* Fullscreen Toggle */}
-                          <motion.button
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.2 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={toggleFullscreen}
-                            className="fixed top-20 left-4 z-[60] w-12 h-12 rounded-full
-                              bg-black/60 backdrop-blur-xl border border-white/20
-                              flex items-center justify-center
-                              hover:bg-black/80 active:bg-black/90
-                              transition-all shadow-2xl"
-                            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                          >
-                            {isFullscreen ? (
-                              <Minimize className="w-6 h-6 text-white" />
-                            ) : (
-                              <Maximize className="w-6 h-6 text-white" />
-                            )}
-                          </motion.button>
-                        </>
-                      )}
-                    </AnimatePresence>
-                  )}
-
-                  {/* Mute Toggle - Portrait mode (always visible) */}
-                  {isMobileView && !orientation.isLandscape && (
+                  {/* Mute Toggle - Always visible on mobile (both orientations) */}
+                  {isMobileView && (
                     <MuteToggle
                       isMuted={isMuted}
                       onToggle={toggleMute}
+                      className="!bottom-20 !right-4"
                     />
                   )}
 

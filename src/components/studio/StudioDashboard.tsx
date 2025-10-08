@@ -730,12 +730,6 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
                     </div>
                   </div>
                 )}
-                <div className="px-4 py-2 bg-slate-800/60 border border-slate-600/50 rounded-lg text-gray-200 text-sm font-medium">
-                  Studio Preview • 16:9
-                </div>
-                <button className="px-5 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 hover:text-white text-sm rounded-lg transition-all border border-purple-500/30 hover:border-purple-500/50 font-medium">
-                  Fullscreen
-                </button>
               </div>
             </div>
           </div>

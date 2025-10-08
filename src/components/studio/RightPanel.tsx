@@ -496,12 +496,12 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
 
   const tabs = [
     { id: 'streaminfo' as const, name: 'Stream Info', icon: '📺', count: null },
-    { id: 'hotleads' as const, name: 'Hot Leads', icon: '🎯', count: viewers.filter(v => v.intentScore >= 75).length },
+    { id: 'chat' as const, name: 'Legacy Chat', icon: '💬', count: messages.length },
     { id: 'aichat' as const, name: 'AI Chat', icon: '🤖', count: null },
     { id: 'offers' as const, name: 'AutoOffer™', icon: '💰', count: null },
+    { id: 'hotleads' as const, name: 'Hot Leads', icon: '🎯', count: viewers.filter(v => v.intentScore >= 75).length },
     { id: 'insights' as const, name: 'Insights™', icon: '🧠', count: null },
     { id: 'scheduler' as const, name: 'Scheduler™', icon: '📅', count: null },
-    { id: 'chat' as const, name: 'Legacy Chat', icon: '💬', count: messages.length },
     { id: 'analytics' as const, name: 'Analytics', icon: '📈', count: null }
   ];
 

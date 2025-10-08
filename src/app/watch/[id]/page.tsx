@@ -1177,7 +1177,7 @@ export default function LiveViewerPage() {
             onShare={handleInstagramShare}
             onMoreMenu={handleInstagramMoreMenu}
             connected={connected}
-            isVisible={orientation.isLandscape ? controlsAutoHide.isVisible : true}
+            isVisible={orientation.isLandscape ? (controlsAutoHide.isVisible || keyboardState.isOpen) : true}
           />
         )}
       </div>

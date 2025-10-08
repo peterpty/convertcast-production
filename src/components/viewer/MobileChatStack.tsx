@@ -189,10 +189,13 @@ function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <div
       className={`inline-flex items-baseline gap-2 max-w-[85%]
-        ${isPrivate ? 'bg-purple-500/10' : isPinned ? 'bg-gradient-to-r from-purple-600/20 to-pink-600/20' : 'bg-white/5'}
+        ${isPrivate ? 'bg-purple-900/70' : isPinned ? 'bg-gradient-to-r from-purple-900/70 to-pink-900/70' : 'bg-black/70'}
         backdrop-blur-2xl border rounded-2xl px-3 py-1.5
-        ${isPrivate ? 'border-purple-300/20' : isPinned ? 'border-purple-400/30' : 'border-white/10'}
-        shadow-2xl shadow-[0_0_20px_rgba(0,0,0,0.3)]`}
+        ${isPrivate ? 'border-purple-400/50' : isPinned ? 'border-purple-400/60' : 'border-white/30'}
+        shadow-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]`}
+      style={{
+        textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+      }}
     >
       {/* Pinned Indicator */}
       {isPinned && (
@@ -206,7 +209,7 @@ function MessageBubble({ message }: MessageBubbleProps) {
 
       {/* Username */}
       <span className={`font-semibold text-sm flex-shrink-0
-        ${isPrivate ? 'text-purple-200' : isPinned ? 'text-white' : 'text-white/90'}`}>
+        ${isPrivate ? 'text-purple-200' : isPinned ? 'text-white' : 'text-white'}`}>
         {username}
       </span>
 

@@ -117,8 +117,15 @@ const InstagramBarComponent = ({
 
   const isLandscape = orientation.isLandscape;
 
-  // Calculate bottom position based on keyboard
-  const bottomPosition = keyboardState.isOpen ? keyboardState.height : 0;
+  // Calculate position based on keyboard
+  // For iOS Safari, we need to position from TOP when keyboard is open
+  // because position:fixed with bottom doesn't respect visualViewport
+  const useTopPositioning = keyboardState.isOpen && typeof window !== 'undefined' && window.visualViewport;
+  const barHeight = isLandscape ? 48 : 60; // Match CSS heights from globals.css
+  const topPosition = useTopPositioning
+    ? window.visualViewport!.height - barHeight - 8 // 8px margin for breathing room
+    : 0;
+  const bottomPosition = !useTopPositioning && keyboardState.isOpen ? keyboardState.height : 0;
 
   // Memoize handlers to prevent re-renders of child components
   const handleMessageChange = useCallback((value: string) => {
@@ -177,7 +184,10 @@ const InstagramBarComponent = ({
         ${isLandscape ? 'instagram-bar-landscape' : 'instagram-bar-portrait'}
         ${className}`}
       style={{
-        bottom: `max(${bottomPosition}px, env(safe-area-inset-bottom, 0px))`,
+        ...(useTopPositioning
+          ? { top: `${topPosition}px`, bottom: 'auto' }
+          : { bottom: `max(${bottomPosition}px, env(safe-area-inset-bottom, 0px))` }
+        ),
         paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
         pointerEvents: shouldShow ? 'auto' : 'none', // Disable interactions when hidden
         visibility: shouldShow ? 'visible' : 'hidden', // Hide but keep in DOM

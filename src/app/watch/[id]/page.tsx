@@ -11,8 +11,7 @@ import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
 import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
-import { InstagramBar } from '@/components/viewer/InstagramBar';
-import { FloatingComments, type FloatingComment } from '@/components/viewer/FloatingComments';
+import { MobileChatStack, type ChatMessage as MobileChatMessage } from '@/components/viewer/MobileChatStack';
 import { TouchReactions } from '@/components/viewer/TouchReactions';
 import { MobileControls } from '@/components/viewer/MobileControls';
 import { RotateScreen } from '@/components/viewer/RotateScreen';
@@ -1105,35 +1104,22 @@ export default function LiveViewerPage() {
           </div>
         </div>
 
-        {/* Floating Comments - Mobile Only */}
+        {/* Mobile Chat Stack - Replaces FloatingComments + InstagramBar */}
         {isMobileView && (
-          <FloatingComments
-            messages={chatMessages.slice(-10).map((msg): FloatingComment => ({
+          <MobileChatStack
+            messages={chatMessages.map((msg): MobileChatMessage => ({
               id: msg.id,
               username: msg.viewer_profiles
                 ? `${msg.viewer_profiles.first_name} ${msg.viewer_profiles.last_name}`
                 : 'Anonymous',
               message: msg.message,
               isPrivate: msg.is_private,
+              isPinned: msg.status === 'pinned',
               timestamp: new Date(msg.created_at).getTime(),
             }))}
-            onCommentClick={() => {
-              // TODO: Open full chat modal
-              setIsChatOpen(true);
-            }}
-            keyboardHeight={keyboardState.height}
-          />
-        )}
-
-        {/* Instagram Bar - Mobile Only */}
-        {isMobileView && (
-          <InstagramBar
             onSendMessage={handleInstagramSendMessage}
             onReaction={handleInstagramReaction}
-            onShare={handleInstagramShare}
-            onMoreMenu={handleInstagramMoreMenu}
             connected={connected}
-            isVisible={orientation.isLandscape ? (controlsAutoHide.isVisible || keyboardState.isOpen) : true}
           />
         )}
       </div>

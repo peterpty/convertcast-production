@@ -174,7 +174,6 @@ const InstagramBarComponent = ({
       }
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={`fixed left-0 right-0 z-50 transition-all duration-200
-        bg-black/40 backdrop-blur-2xl border-t border-white/10
         ${isLandscape ? 'instagram-bar-landscape' : 'instagram-bar-portrait'}
         ${className}`}
       style={{

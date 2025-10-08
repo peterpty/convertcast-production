@@ -177,6 +177,12 @@ export default function LiveViewerPage() {
 
     // Block keyboard seeking
     const preventKeyboardSeek = (e: KeyboardEvent) => {
+      // CRITICAL: Don't block keyboard if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return; // Allow normal typing, including spacebar
+      }
+
       const seekKeys = ['ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '];
 
       if (seekKeys.includes(e.key)) {
@@ -368,7 +374,8 @@ export default function LiveViewerPage() {
       if (!streamId) return;
 
       console.log('📜 Loading chat history for stream:', streamId);
-      const messages = await ChatService.getMessages(streamId, 50);
+      // Pass viewerId and isHost=false so viewers only see public + their own private messages
+      const messages = await ChatService.getMessages(streamId, 50, viewerId, false);
 
       if (messages.length > 0) {
         console.log(`✅ Loaded ${messages.length} chat messages from history`);
@@ -377,6 +384,8 @@ export default function LiveViewerPage() {
           message: msg.message,
           created_at: msg.created_at,
           is_synthetic: msg.is_synthetic,
+          is_private: msg.is_private,
+          sender_id: msg.sender_id,
           status: msg.status,
           viewer_profiles: msg.viewer_profiles
         }));
@@ -385,7 +394,7 @@ export default function LiveViewerPage() {
     }
 
     loadChatHistory();
-  }, [streamId]);
+  }, [streamId, viewerId]);
 
   // Subscribe to Supabase Realtime for chat messages (fallback/redundancy)
   useEffect(() => {
@@ -394,6 +403,13 @@ export default function LiveViewerPage() {
     console.log('📡 Setting up Supabase Realtime subscription for chat...');
     const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
       console.log('📨 New message from Supabase Realtime:', message);
+
+      // CRITICAL: Filter private messages - only show public messages or own private messages
+      // Viewers should not see other viewers' private messages to the host
+      if (message.is_private && message.sender_id !== viewerId) {
+        console.log('🔒 Filtering out private message from another viewer');
+        return;
+      }
 
       setChatMessages(prev => {
         const exists = prev.some(m => m.id === message.id);
@@ -406,7 +422,7 @@ export default function LiveViewerPage() {
       console.log('🔌 Cleaning up Supabase Realtime subscription');
       unsubscribe();
     };
-  }, [streamId]);
+  }, [streamId, viewerId]);
 
   // Clean up old floating reactions after 10 seconds
   useEffect(() => {

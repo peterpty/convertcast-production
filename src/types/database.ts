@@ -156,8 +156,10 @@ export type Database = {
           created_at: string | null
           id: string
           intent_signals: Json | null
+          is_private: boolean
           is_synthetic: boolean | null
           message: string
+          sender_id: string | null
           status: string
           stream_id: string
           viewer_profile_id: string
@@ -166,8 +168,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           intent_signals?: Json | null
+          is_private?: boolean
           is_synthetic?: boolean | null
           message: string
+          sender_id?: string | null
           status?: string
           stream_id: string
           viewer_profile_id: string
@@ -176,8 +180,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           intent_signals?: Json | null
+          is_private?: boolean
           is_synthetic?: boolean | null
           message?: string
+          sender_id?: string | null
           status?: string
           stream_id?: string
           viewer_profile_id?: string

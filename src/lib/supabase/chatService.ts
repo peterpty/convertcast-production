@@ -11,6 +11,8 @@ export interface ChatMessageWithProfile {
   stream_id: string | null;
   viewer_profile_id: string | null;
   is_synthetic: boolean;
+  is_private: boolean;
+  sender_id: string | null;
   status: 'active' | 'removed' | 'deleted' | 'pinned' | 'synthetic';
   intent_signals: any;
   viewer_profiles?: {
@@ -34,6 +36,8 @@ export class ChatService {
    * @param viewerProfileId - Optional viewer profile ID
    * @param isSynthetic - Whether this is an AI-generated message
    * @param intentSignals - Optional AI intent scoring data
+   * @param isPrivate - Whether this is a private message (visible only to host)
+   * @param senderId - User ID or session ID of the sender
    */
   static async saveMessage(
     streamId: string,
@@ -41,7 +45,9 @@ export class ChatService {
     username: string = 'Anonymous',
     viewerProfileId?: string | null,
     isSynthetic: boolean = false,
-    intentSignals?: any
+    intentSignals?: any,
+    isPrivate: boolean = false,
+    senderId?: string | null
   ): Promise<ChatMessage | null> {
     try {
       const messageData: ChatMessageInsert = {
@@ -51,6 +57,8 @@ export class ChatService {
         status: isSynthetic ? 'synthetic' : 'active',
         is_synthetic: isSynthetic,
         intent_signals: intentSignals || null,
+        is_private: isPrivate,
+        sender_id: senderId || null,
       };
 
       const { data, error } = await supabase
@@ -79,10 +87,12 @@ export class ChatService {
    */
   static async getMessages(
     streamId: string,
-    limit: number = 50
+    limit: number = 50,
+    currentUserId?: string | null,
+    isHost: boolean = false
   ): Promise<ChatMessageWithProfile[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('chat_messages')
         .select(`
           id,
@@ -91,6 +101,8 @@ export class ChatService {
           stream_id,
           viewer_profile_id,
           is_synthetic,
+          is_private,
+          sender_id,
           status,
           intent_signals,
           viewer_profiles (
@@ -101,16 +113,26 @@ export class ChatService {
           )
         `)
         .eq('stream_id', streamId)
-        .eq('status', 'active')
+        .in('status', ['active', 'pinned'])
         .order('created_at', { ascending: true })
         .limit(limit);
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('❌ Failed to fetch chat messages:', error);
         return [];
       }
 
-      return data as ChatMessageWithProfile[];
+      // Filter private messages on the client side
+      // Host sees all messages, viewers only see public messages + their own private messages
+      const filtered = (data as ChatMessageWithProfile[]).filter(msg => {
+        if (isHost) return true; // Host sees everything
+        if (!msg.is_private) return true; // Everyone sees public messages
+        return msg.sender_id === currentUserId; // Viewers see their own private messages
+      });
+
+      return filtered;
     } catch (error) {
       console.error('❌ Error fetching chat messages:', error);
       return [];
@@ -152,6 +174,8 @@ export class ChatService {
               stream_id,
               viewer_profile_id,
               is_synthetic,
+              is_private,
+              sender_id,
               status,
               intent_signals,
               viewer_profiles (

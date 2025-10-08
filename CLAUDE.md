@@ -399,7 +399,28 @@ git push --force  # Only use after git reset --hard
 ---
 
 **Last Stable Commit:** `6b73f56` - "fix: FINAL FIX for chat input focus loss"
-**Production Status:** ✅ Stable
-**Next Priority:** Production WebSocket server
+**Production Status:** ⚠️ MVP IN PROGRESS - Critical fixes needed
+**Next Priority:** Fix private messages + pinned messages
 
 **Remember: Production stability > moving fast. Test thoroughly.**
+
+---
+
+## 🎯 **PRODUCTION ROADMAP**
+
+**CRITICAL:** See [PRODUCTION_ROADMAP.md](./PRODUCTION_ROADMAP.md) for comprehensive plan
+
+**Current Status:** 54% MVP Ready (14/26 requirements complete)
+
+**BLOCKING ISSUES:**
+1. **Private Messages:** ❌ BROKEN - Viewers seeing other viewers' private messages
+2. **Pinned Messages:** ⚠️ UNTESTED - Needs verification after RLS fix
+
+**IMMEDIATE ACTION REQUIRED:**
+1. Apply SQL migration: `supabase/migrations/20250110000001_fix_chat_rls_for_anonymous.sql`
+2. Test private messages with multiple browsers
+3. Test pinned messages in viewer interface
+
+**Target MVP Date:** 2-3 weeks from now
+
+See full roadmap with all phases, milestones, and success criteria in [PRODUCTION_ROADMAP.md](./PRODUCTION_ROADMAP.md)

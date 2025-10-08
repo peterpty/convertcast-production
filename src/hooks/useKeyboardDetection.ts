@@ -27,11 +27,18 @@ export function useKeyboardDetection(): KeyboardState {
       const viewport = window.visualViewport;
       const windowHeight = window.innerHeight;
       const viewportHeight = viewport.height;
+      const viewportOffsetTop = viewport.offsetTop || 0;
+      const isLandscape = window.innerWidth > window.innerHeight;
 
       // Keyboard is considered open if viewport height is significantly smaller than window height
-      // Threshold: 75% of window height
-      const isKeyboardOpen = viewportHeight < windowHeight * 0.75;
-      const keyboardHeight = isKeyboardOpen ? windowHeight - viewportHeight : 0;
+      // Threshold: 60% for landscape (smaller keyboards), 75% for portrait
+      const threshold = isLandscape ? 0.60 : 0.75;
+      const isKeyboardOpen = viewportHeight < windowHeight * threshold || viewportOffsetTop > 0;
+
+      // Calculate actual keyboard height accounting for iOS viewport offset
+      const keyboardHeight = isKeyboardOpen
+        ? Math.max(windowHeight - viewportHeight, viewportOffsetTop + (windowHeight - viewportHeight))
+        : 0;
 
       const newState: KeyboardState = {
         isOpen: isKeyboardOpen,

@@ -398,34 +398,39 @@ git push --force  # Only use after git reset --hard
 
 ---
 
-**Last Stable Commit:** `f0d3d58` - "fix: Make viewer_profile_id nullable"
-**Production Status:** 🔴 CRITICAL BUGS - Chat system broken
-**Next Priority:** Fix UUID mapping issue (blocking everything)
+**Last Stable Commit:** `2607371` - "fix: CRITICAL - Complete UUID fix for Studio Dashboard chat"
+**Production Status:** 🟡 UUID FIX DEPLOYED - Awaiting test verification
+**Next Priority:** Test chat functionality and verify UUID fix works
 
 **Remember: Production stability > moving fast. Test thoroughly.**
 
 ---
 
-## 🔴 **CRITICAL PRODUCTION BLOCKERS** (2025-01-10)
+## 🟡 **UUID FIX DEPLOYED** (2025-01-10)
 
-### **Status: 40% MVP Ready** (regressed from 54%)
+### **Status: UUID Fix Complete - Testing Required**
 
-**SEVERITY 1 (BLOCKING LAUNCH):**
-1. 🔴 **Chat Broken on Mobile** - No messages send/receive (UUID error)
-2. 🔴 **Chat Broken on Desktop** - Messages fail to save (UUID error)
-3. 🔴 **UUID Mapping Issue** - Using Mux playback ID instead of DB stream UUID
-4. 🔴 **Private Messages Not Private** - Filtering not working
-5. 🔴 **Silent Failures** - No error feedback to users
+**DEPLOYED FIXES (Commits 605138a + 2607371):**
+1. ✅ **Viewer Page UUID Fix** - Changed from playback ID to stream.id (UUID)
+2. ✅ **Studio Dashboard UUID Fix** - Changed from streamId to stream.id (UUID)
+3. ✅ **Error Handling Added** - Try/catch with console logging
+4. ✅ **Fixed 3 locations in viewer page** - handleInstagramSendMessage, subscribeToMessages, loadChatHistory
+5. ✅ **Fixed 3 locations in studio** - handleSendMessage, subscribeToMessages, loadChatHistory
 
-**Root Cause:** Viewer page uses Mux playback ID from URL but tries to use it as database stream UUID. PostgreSQL rejects it with: `invalid input syntax for type uuid`
+**Root Cause (FIXED):** Viewer page URL uses Mux playback ID `/watch/LhE663AjEa1Xvz2c2i1GGs9MpkFnQgNCHdTu6v6SA1w` but database expects PostgreSQL UUID. Now correctly using `stream.id` (UUID) instead of URL playback ID for all chat operations.
 
-**IMMEDIATE ACTION REQUIRED (IN ORDER):**
-1. 🚨 Add stream UUID lookup from Mux playback ID
-2. 🚨 Fix chat message saving with correct UUID
-3. 🚨 Add error handling with user feedback
-4. 🚨 Test private message filtering
-5. 🚨 Test on mobile devices
+**PENDING VERIFICATION:**
+1. ⏳ **Test chat on mobile** - Verify messages send/receive without UUID errors
+2. ⏳ **Test chat on desktop/studio** - Verify host can send messages
+3. ⏳ **Test private message filtering** - Verify privacy works correctly
+4. ⏳ **Verify no console errors** - Check for UUID validation errors
 
-**Target:** 1 day to fix critical bugs, then 2 days testing
+**NEXT PHASE (After Verification):**
+1. 🔜 Add toast notifications for user feedback
+2. 🔜 Add loading states during message send
+3. 🔜 Add retry logic for failed messages
+4. 🔜 Comprehensive testing per PRODUCTION_FIX_PLAN.md
+
+**Deployment Status:** Vercel deploying commit 2607371 (ETA: 2-3 minutes)
 
 See [PRODUCTION_FIX_PLAN.md](./PRODUCTION_FIX_PLAN.md) for comprehensive 8-perspective analysis and step-by-step fix plan

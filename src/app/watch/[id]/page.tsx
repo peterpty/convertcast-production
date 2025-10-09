@@ -404,11 +404,19 @@ export default function LiveViewerPage() {
     const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
       console.log('📨 New message from Supabase Realtime:', message);
 
-      // CRITICAL: Filter private messages - only show public messages or own private messages
-      // Viewers should not see other viewers' private messages to the host
-      if (message.is_private && message.sender_id !== viewerId) {
-        console.log('🔒 Filtering out private message from another viewer');
-        return;
+      // CRITICAL: Filter private messages
+      // Viewers should only see:
+      // 1. Public messages
+      // 2. Their own private messages to host
+      // 3. Host's private replies addressed to them
+      if (message.is_private) {
+        const isMine = message.sender_id === viewerId;
+        const isReplyToMe = message.reply_to_user_id === viewerId;
+
+        if (!isMine && !isReplyToMe) {
+          console.log('🔒 Filtering out private message (not for this viewer)');
+          return;
+        }
       }
 
       setChatMessages(prev => {
@@ -597,7 +605,7 @@ export default function LiveViewerPage() {
     if (!message.trim() || !streamId) return;
 
     // CRITICAL: Save message directly to database with is_private and sender_id
-    // This ensures messages persist with correct privacy settings
+    // Supabase Realtime will broadcast to all viewers with proper filtering
     await ChatService.saveMessage(
       streamId,
       message.trim(),
@@ -609,11 +617,8 @@ export default function LiveViewerPage() {
       viewerId // sender_id
     );
 
-    // Also broadcast via WebSocket for real-time display (if connected)
-    if (connected) {
-      sendChatMessage(message, viewerId, isPrivate);
-    }
-  }, [connected, sendChatMessage, viewerId, streamId]);
+    // ✅ NO WebSocket broadcast - Supabase Realtime handles it with proper filtering
+  }, [viewerId, streamId]);
 
   const handleInstagramReaction = useCallback(() => {
     handleReaction('heart');
@@ -1147,6 +1152,7 @@ export default function LiveViewerPage() {
               message: msg.message,
               isPrivate: msg.is_private,
               isPinned: msg.status === 'pinned',
+              isReply: !!msg.reply_to_user_id, // Show reply indicator if this is a reply
               timestamp: new Date(msg.created_at).getTime(),
             }))}
             onSendMessage={handleInstagramSendMessage}

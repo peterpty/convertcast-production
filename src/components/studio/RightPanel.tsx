@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, memo } from 'react';
 import { Socket } from 'socket.io-client';
-import { Lock, Unlock, Pin, PinOff } from 'lucide-react';
+import { Lock, Unlock, Pin, PinOff, Reply } from 'lucide-react';
 import { ChatService } from '@/lib/supabase/chatService';
 import { HotLeadPanel } from '@/components/ai/HotLeadPanel';
 import { AILiveChat } from '@/components/ai/AILiveChat';
@@ -23,6 +23,8 @@ interface ChatMessage {
   is_synthetic?: boolean;
   is_private?: boolean;
   sender_id?: string;
+  reply_to_user_id?: string;
+  reply_to_message_id?: string;
   status?: 'active' | 'removed' | 'deleted' | 'pinned' | 'synthetic';
   intent_signals?: {
     buying_intent: number;
@@ -77,6 +79,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
   const [streamMetrics, setStreamMetrics] = useState<any>({});
   const [newMessage, setNewMessage] = useState('');
   const [isPrivateMessage, setIsPrivateMessage] = useState(false);
+  const [replyContext, setReplyContext] = useState<{ userId: string; username: string; messageId: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize AI Suite and mock data
@@ -391,22 +394,26 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() && socket && connected) {
-      // Send message via WebSocket - it will echo back and be added by the listener
-      // No optimistic update needed to avoid duplicates
-      socket.emit('send-chat-message', {
-        streamId,
-        message: newMessage.trim(),
-        username: 'Streamer',
-        userId: 'streamer',
-        isPrivate: isPrivateMessage,
-        timestamp: new Date().toISOString()
-      });
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
 
-      setNewMessage('');
-      setIsPrivateMessage(false); // Reset to public after sending
-    }
+    // Save message to database (Supabase Realtime will broadcast to all viewers)
+    await ChatService.saveMessage(
+      streamId,
+      newMessage.trim(),
+      'Streamer', // username
+      null, // viewer_profile_id
+      false, // is_synthetic
+      null, // intent_signals
+      isPrivateMessage || !!replyContext, // is_private (private if explicitly set OR replying)
+      'streamer', // sender_id
+      replyContext?.userId || null, // reply_to_user_id
+      replyContext?.messageId || null // reply_to_message_id
+    );
+
+    setNewMessage('');
+    setIsPrivateMessage(false); // Reset to public after sending
+    setReplyContext(null); // Clear reply context
   };
 
   // Pin/unpin message handler
@@ -444,6 +451,24 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
         console.log('✅ Message pinned');
       }
     }
+  };
+
+  // Reply privately handler
+  const handleReplyPrivately = (message: ChatMessage) => {
+    if (!message.sender_id) return;
+
+    setReplyContext({
+      userId: message.sender_id,
+      username: message.viewer_name,
+      messageId: message.id
+    });
+    setIsPrivateMessage(true); // Ensure it's marked as private
+
+    // Focus input field (the ref will be added when we modify the input)
+    setTimeout(() => {
+      const input = document.querySelector<HTMLInputElement>('input[placeholder*="message"]');
+      input?.focus();
+    }, 100);
   };
 
   const formatTime = (timestamp: string) => {
@@ -824,6 +849,16 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
+                      {/* Reply Privately button - only show for viewer messages (not host messages) */}
+                      {message.sender_id && message.sender_id !== 'streamer' && (
+                        <button
+                          onClick={() => handleReplyPrivately(message)}
+                          className="p-1 rounded hover:bg-purple-700 bg-purple-600/50 transition-colors text-purple-300"
+                          title="Reply privately to this viewer"
+                        >
+                          <Reply className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handlePinMessage(message.id)}
                         className={`p-1 rounded hover:bg-gray-700 transition-colors ${
@@ -884,12 +919,33 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
                     </>
                   )}
                 </button>
-                {isPrivateMessage && (
+                {isPrivateMessage && !replyContext && (
                   <span className="text-xs text-purple-300">
                     Only visible to specific viewer
                   </span>
                 )}
               </div>
+
+              {/* Reply Context Indicator */}
+              {replyContext && (
+                <div className="mb-2 flex items-center justify-between bg-purple-900/30 border border-purple-500/30 rounded px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Reply className="w-3 h-3 text-purple-400" />
+                    <span className="text-xs text-purple-300">
+                      Replying privately to <span className="font-semibold">{replyContext.username}</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setReplyContext(null);
+                      setIsPrivateMessage(false);
+                    }}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
 
               <div className="flex space-x-2">
                 <input

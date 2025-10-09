@@ -13,6 +13,8 @@ export interface ChatMessageWithProfile {
   is_synthetic: boolean;
   is_private: boolean;
   sender_id: string | null;
+  reply_to_user_id: string | null;
+  reply_to_message_id: string | null;
   status: 'active' | 'removed' | 'deleted' | 'pinned' | 'synthetic';
   intent_signals: any;
   viewer_profiles?: {
@@ -38,6 +40,8 @@ export class ChatService {
    * @param intentSignals - Optional AI intent scoring data
    * @param isPrivate - Whether this is a private message (visible only to host)
    * @param senderId - User ID or session ID of the sender
+   * @param replyToUserId - User ID this message is replying to (for bi-directional private messaging)
+   * @param replyToMessageId - Message ID this is replying to (for threading context)
    */
   static async saveMessage(
     streamId: string,
@@ -47,7 +51,9 @@ export class ChatService {
     isSynthetic: boolean = false,
     intentSignals?: any,
     isPrivate: boolean = false,
-    senderId?: string | null
+    senderId?: string | null,
+    replyToUserId?: string | null,
+    replyToMessageId?: string | null
   ): Promise<ChatMessage | null> {
     try {
       const messageData: ChatMessageInsert = {
@@ -59,6 +65,8 @@ export class ChatService {
         intent_signals: intentSignals || null,
         is_private: isPrivate,
         sender_id: senderId || null,
+        reply_to_user_id: replyToUserId || null,
+        reply_to_message_id: replyToMessageId || null,
       };
 
       const { data, error } = await supabase
@@ -103,6 +111,8 @@ export class ChatService {
           is_synthetic,
           is_private,
           sender_id,
+          reply_to_user_id,
+          reply_to_message_id,
           status,
           intent_signals,
           viewer_profiles (
@@ -125,11 +135,13 @@ export class ChatService {
       }
 
       // Filter private messages on the client side
-      // Host sees all messages, viewers only see public messages + their own private messages
+      // Host sees all messages, viewers only see public messages + their own private messages + replies to them
       const filtered = (data as ChatMessageWithProfile[]).filter(msg => {
         if (isHost) return true; // Host sees everything
         if (!msg.is_private) return true; // Everyone sees public messages
-        return msg.sender_id === currentUserId; // Viewers see their own private messages
+        if (msg.sender_id === currentUserId) return true; // Viewers see their own private messages
+        if (msg.reply_to_user_id === currentUserId) return true; // Viewers see private replies addressed to them
+        return false;
       });
 
       return filtered;
@@ -176,6 +188,8 @@ export class ChatService {
               is_synthetic,
               is_private,
               sender_id,
+              reply_to_user_id,
+              reply_to_message_id,
               status,
               intent_signals,
               viewer_profiles (

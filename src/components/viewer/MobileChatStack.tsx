@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Send, Unlock, Heart, Pin } from 'lucide-react';
+import { Lock, Send, Unlock, Heart, Pin, Reply } from 'lucide-react';
 import { useOrientation } from '@/hooks/useOrientation';
 
 export interface ChatMessage {
@@ -11,6 +11,7 @@ export interface ChatMessage {
   message: string;
   isPrivate?: boolean;
   isPinned?: boolean;
+  isReply?: boolean;
   timestamp: number;
 }
 
@@ -184,7 +185,7 @@ interface MessageBubbleProps {
 }
 
 function MessageBubble({ message }: MessageBubbleProps) {
-  const { username, message: text, isPrivate, isPinned } = message;
+  const { username, message: text, isPrivate, isPinned, isReply } = message;
 
   return (
     <div
@@ -200,6 +201,11 @@ function MessageBubble({ message }: MessageBubbleProps) {
       {/* Pinned Indicator */}
       {isPinned && (
         <Pin className="w-3 h-3 text-purple-300 flex-shrink-0" />
+      )}
+
+      {/* Reply Indicator */}
+      {isReply && !isPinned && (
+        <Reply className="w-3 h-3 text-purple-300 flex-shrink-0" />
       )}
 
       {/* Private Indicator */}

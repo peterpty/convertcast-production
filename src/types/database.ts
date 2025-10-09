@@ -159,6 +159,8 @@ export type Database = {
           is_private: boolean
           is_synthetic: boolean | null
           message: string
+          reply_to_message_id: string | null
+          reply_to_user_id: string | null
           sender_id: string | null
           status: string
           stream_id: string
@@ -171,6 +173,8 @@ export type Database = {
           is_private?: boolean
           is_synthetic?: boolean | null
           message: string
+          reply_to_message_id?: string | null
+          reply_to_user_id?: string | null
           sender_id?: string | null
           status?: string
           stream_id: string
@@ -183,6 +187,8 @@ export type Database = {
           is_private?: boolean
           is_synthetic?: boolean | null
           message?: string
+          reply_to_message_id?: string | null
+          reply_to_user_id?: string | null
           sender_id?: string | null
           status?: string
           stream_id?: string

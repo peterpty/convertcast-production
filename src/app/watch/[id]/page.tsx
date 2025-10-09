@@ -16,6 +16,7 @@ import { TouchReactions } from '@/components/viewer/TouchReactions';
 import { MobileControls } from '@/components/viewer/MobileControls';
 import { RotateScreen } from '@/components/viewer/RotateScreen';
 import { MuteToggle } from '@/components/viewer/MuteToggle';
+import DesktopChatSidebar from '@/components/viewer/DesktopChatSidebar';
 import { useOrientation } from '@/hooks/useOrientation';
 import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
 import { useLandscapeLock } from '@/hooks/useLandscapeLock';
@@ -777,133 +778,6 @@ export default function LiveViewerPage() {
     );
   }
 
-  // Chat content component (reused in both mobile and desktop)
-  const ChatContent = () => (
-    <>
-      {/* Chat Header */}
-      <div className="p-4 border-b border-purple-500/20">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-white flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Live Chat
-          </h3>
-          <div className="text-xs text-purple-300">
-            {chatMessages.length} messages
-          </div>
-        </div>
-      </div>
-
-      {/* Chat Messages */}
-      <div
-        ref={chatRef}
-        className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-500/30 hide-scrollbar smooth-scroll"
-        style={{ maxHeight: isMobileView ? 'calc(60vh - 10rem)' : 'calc(100vh - 16rem)' }}
-      >
-        <div className="space-y-3">
-          {chatMessages.length === 0 ? (
-            <div className="text-center text-purple-300/60 py-8">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>No messages yet. Be the first to chat!</p>
-            </div>
-          ) : (
-            chatMessages.map((message) => {
-              const displayName = message.viewer_profiles
-                ? `${message.viewer_profiles.first_name} ${message.viewer_profiles.last_name}`
-                : 'Anonymous Viewer';
-
-              const messageTime = new Date(message.created_at).toLocaleTimeString();
-              const isOwnMessage = message.sender_id === viewerId;
-
-              return (
-                <div
-                  key={message.id}
-                  className={`${message.is_private ? 'bg-purple-900/30 border border-purple-500/30 rounded-lg p-2' : ''}`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {message.is_private && (
-                      <Lock className="w-3 h-3 text-purple-400" />
-                    )}
-                    <span className="text-xs font-medium text-purple-200">
-                      {displayName}
-                      {isOwnMessage && ' (You)'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {messageTime}
-                    </span>
-                    {message.is_private && (
-                      <span className="text-xs text-purple-400 font-medium">
-                        Private
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-white">{message.message}</div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Chat Input */}
-      <div className="p-4 border-t border-purple-500/20 mobile-safe-bottom">
-        <div className="mb-2 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setIsPrivateMessage(!isPrivateMessage)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all touch-target ${
-              isPrivateMessage
-                ? 'bg-purple-600 text-white'
-                : 'bg-slate-700/50 text-gray-400 hover:text-purple-300'
-            }`}
-          >
-            {isPrivateMessage ? (
-              <>
-                <Lock className="w-3 h-3" />
-                Private Message
-              </>
-            ) : (
-              <>
-                <Unlock className="w-3 h-3" />
-                Public Message
-              </>
-            )}
-          </button>
-          {isPrivateMessage && (
-            <span className="text-xs text-purple-300">
-              Only visible to host
-            </span>
-          )}
-        </div>
-
-        <form onSubmit={sendMessage} className="flex gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={isPrivateMessage ? "Send private message to host..." : "Type a message..."}
-            className={`flex-1 px-3 py-2 bg-slate-700/50 border ${
-              isPrivateMessage ? 'border-purple-400' : 'border-purple-500/30'
-            } rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-400`}
-          />
-          <button
-            type="submit"
-            disabled={!newMessage.trim() || !connected}
-            className={`p-2 touch-target ${
-              isPrivateMessage
-                ? 'bg-purple-700 hover:bg-purple-800'
-                : connected
-                ? 'bg-purple-600 hover:bg-purple-700'
-                : 'bg-gray-600'
-            } disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors`}
-            title={!connected ? 'Connection required to send messages' : ''}
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
-      </div>
-    </>
-  );
-
   return (
     <WebSocketErrorBoundary
       connectionStatus={connectionStatus}
@@ -1144,8 +1018,13 @@ export default function LiveViewerPage() {
             {/* Chat Sidebar - Desktop Only */}
             {!isMobileView && (
               <div className="lg:col-span-1">
-                <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl sticky top-24 h-[calc(100vh-8rem)] flex flex-col">
-                  <ChatContent />
+                <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl shadow-2xl sticky top-24 h-[calc(100vh-8rem)]">
+                  <DesktopChatSidebar
+                    messages={chatMessages}
+                    connected={connected}
+                    viewerId={viewerId}
+                    onSendMessage={handleInstagramSendMessage}
+                  />
                 </div>
               </div>
             )}

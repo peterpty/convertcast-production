@@ -371,11 +371,12 @@ export default function LiveViewerPage() {
   // Load chat history from Supabase
   useEffect(() => {
     async function loadChatHistory() {
-      if (!streamId) return;
+      // CRITICAL: Use streamData.id (UUID) not streamId (playback ID)
+      if (!streamData?.id) return;
 
-      console.log('📜 Loading chat history for stream:', streamId);
+      console.log('📜 Loading chat history for stream:', streamData.id);
       // Pass viewerId and isHost=false so viewers only see public + their own private messages
-      const messages = await ChatService.getMessages(streamId, 50, viewerId, false);
+      const messages = await ChatService.getMessages(streamData.id, 50, viewerId, false);
 
       if (messages.length > 0) {
         console.log(`✅ Loaded ${messages.length} chat messages from history`);
@@ -394,14 +395,15 @@ export default function LiveViewerPage() {
     }
 
     loadChatHistory();
-  }, [streamId, viewerId]);
+  }, [streamData, viewerId]);
 
   // Subscribe to Supabase Realtime for chat messages (fallback/redundancy)
   useEffect(() => {
-    if (!streamId) return;
+    // CRITICAL: Use streamData.id (UUID) not streamId (playback ID)
+    if (!streamData?.id) return;
 
     console.log('📡 Setting up Supabase Realtime subscription for chat...');
-    const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
+    const unsubscribe = ChatService.subscribeToMessages(streamData.id, (message) => {
       console.log('📨 New message from Supabase Realtime:', message);
 
       // CRITICAL: Filter private messages
@@ -430,7 +432,7 @@ export default function LiveViewerPage() {
       console.log('🔌 Cleaning up Supabase Realtime subscription');
       unsubscribe();
     };
-  }, [streamId, viewerId]);
+  }, [streamData, viewerId]);
 
   // Clean up old floating reactions after 10 seconds
   useEffect(() => {
@@ -602,23 +604,32 @@ export default function LiveViewerPage() {
 
   // Memoized callbacks for InstagramBar to prevent re-renders
   const handleInstagramSendMessage = useCallback(async (message: string, isPrivate: boolean) => {
-    if (!message.trim() || !streamId) return;
+    if (!message.trim() || !streamData?.id) {
+      console.warn('⚠️ Cannot send message: No stream UUID available');
+      return;
+    }
 
-    // CRITICAL: Save message directly to database with is_private and sender_id
-    // Supabase Realtime will broadcast to all viewers with proper filtering
-    await ChatService.saveMessage(
-      streamId,
-      message.trim(),
-      viewerId, // username
-      null, // viewer_profile_id (we could add later if auth is added)
-      false, // is_synthetic
-      null, // intent_signals
-      isPrivate, // is_private flag
-      viewerId // sender_id
-    );
+    try {
+      // CRITICAL: Use streamData.id (UUID) not streamId (playback ID)
+      // Supabase Realtime will broadcast to all viewers with proper filtering
+      await ChatService.saveMessage(
+        streamData.id, // ← FIXED: Use database UUID, not Mux playback ID
+        message.trim(),
+        viewerId, // username
+        null, // viewer_profile_id (we could add later if auth is added)
+        false, // is_synthetic
+        null, // intent_signals
+        isPrivate, // is_private flag
+        viewerId // sender_id
+      );
+      console.log('✅ Message saved successfully');
+    } catch (error) {
+      console.error('❌ Failed to send message:', error);
+      // TODO: Add toast notification for user feedback
+    }
 
     // ✅ NO WebSocket broadcast - Supabase Realtime handles it with proper filtering
-  }, [viewerId, streamId]);
+  }, [viewerId, streamData]);
 
   const handleInstagramReaction = useCallback(() => {
     handleReaction('heart');

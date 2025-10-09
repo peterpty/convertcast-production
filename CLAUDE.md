@@ -398,29 +398,34 @@ git push --force  # Only use after git reset --hard
 
 ---
 
-**Last Stable Commit:** `6b73f56` - "fix: FINAL FIX for chat input focus loss"
-**Production Status:** ⚠️ MVP IN PROGRESS - Critical fixes needed
-**Next Priority:** Fix private messages + pinned messages
+**Last Stable Commit:** `f0d3d58` - "fix: Make viewer_profile_id nullable"
+**Production Status:** 🔴 CRITICAL BUGS - Chat system broken
+**Next Priority:** Fix UUID mapping issue (blocking everything)
 
 **Remember: Production stability > moving fast. Test thoroughly.**
 
 ---
 
-## 🎯 **PRODUCTION ROADMAP**
+## 🔴 **CRITICAL PRODUCTION BLOCKERS** (2025-01-10)
 
-**CRITICAL:** See [PRODUCTION_ROADMAP.md](./PRODUCTION_ROADMAP.md) for comprehensive plan
+### **Status: 40% MVP Ready** (regressed from 54%)
 
-**Current Status:** 54% MVP Ready (14/26 requirements complete)
+**SEVERITY 1 (BLOCKING LAUNCH):**
+1. 🔴 **Chat Broken on Mobile** - No messages send/receive (UUID error)
+2. 🔴 **Chat Broken on Desktop** - Messages fail to save (UUID error)
+3. 🔴 **UUID Mapping Issue** - Using Mux playback ID instead of DB stream UUID
+4. 🔴 **Private Messages Not Private** - Filtering not working
+5. 🔴 **Silent Failures** - No error feedback to users
 
-**BLOCKING ISSUES:**
-1. **Private Messages:** ❌ BROKEN - Viewers seeing other viewers' private messages
-2. **Pinned Messages:** ⚠️ UNTESTED - Needs verification after RLS fix
+**Root Cause:** Viewer page uses Mux playback ID from URL but tries to use it as database stream UUID. PostgreSQL rejects it with: `invalid input syntax for type uuid`
 
-**IMMEDIATE ACTION REQUIRED:**
-1. Apply SQL migration: `supabase/migrations/20250110000001_fix_chat_rls_for_anonymous.sql`
-2. Test private messages with multiple browsers
-3. Test pinned messages in viewer interface
+**IMMEDIATE ACTION REQUIRED (IN ORDER):**
+1. 🚨 Add stream UUID lookup from Mux playback ID
+2. 🚨 Fix chat message saving with correct UUID
+3. 🚨 Add error handling with user feedback
+4. 🚨 Test private message filtering
+5. 🚨 Test on mobile devices
 
-**Target MVP Date:** 2-3 weeks from now
+**Target:** 1 day to fix critical bugs, then 2 days testing
 
-See full roadmap with all phases, milestones, and success criteria in [PRODUCTION_ROADMAP.md](./PRODUCTION_ROADMAP.md)
+See [PRODUCTION_FIX_PLAN.md](./PRODUCTION_FIX_PLAN.md) for comprehensive 8-perspective analysis and step-by-step fix plan

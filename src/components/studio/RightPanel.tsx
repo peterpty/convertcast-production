@@ -397,12 +397,33 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !stream?.id) return;
+    if (!newMessage.trim()) {
+      console.warn('⚠️ Cannot send empty message');
+      return;
+    }
+
+    if (!stream?.id) {
+      console.error('⚠️ Cannot send message: stream.id is missing', {
+        stream_exists: !!stream,
+        stream_id: stream?.id,
+        stream_keys: stream ? Object.keys(stream) : []
+      });
+      alert('Error: Stream ID not available. Please refresh the page.');
+      return;
+    }
 
     try {
+      console.log('📤 Host attempting to send message:', {
+        stream_id: stream.id,
+        message_length: newMessage.length,
+        is_private: isPrivateMessage || !!replyContext,
+        sender_id: 'streamer',
+        reply_context: replyContext
+      });
+
       // CRITICAL: Use stream.id (UUID) not streamId (playback ID)
       // Save message to database (Supabase Realtime will broadcast to all viewers)
-      await ChatService.saveMessage(
+      const result = await ChatService.saveMessage(
         stream.id, // ← FIXED: Use database UUID
         newMessage.trim(),
         'Streamer', // username
@@ -415,13 +436,22 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
         replyContext?.messageId || null // reply_to_message_id
       );
 
-      console.log('✅ Streamer: Message saved successfully');
-      setNewMessage('');
-      setIsPrivateMessage(false); // Reset to public after sending
-      setReplyContext(null); // Clear reply context
-    } catch (error) {
-      console.error('❌ Streamer: Failed to send message:', error);
-      // TODO: Show error toast to user
+      if (result) {
+        console.log('✅ Host message saved successfully:', result.id);
+        setNewMessage('');
+        setIsPrivateMessage(false); // Reset to public after sending
+        setReplyContext(null); // Clear reply context
+      } else {
+        console.error('❌ ChatService returned null - message not saved');
+        alert('Failed to send message. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('❌ HOST SEND ERROR:', {
+        error_message: error?.message,
+        error_stack: error?.stack,
+        full_error: error
+      });
+      alert(`Failed to send message: ${error?.message || 'Unknown error'}`);
     }
   };
 

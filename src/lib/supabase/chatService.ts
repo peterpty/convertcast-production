@@ -69,6 +69,24 @@ export class ChatService {
         reply_to_message_id: replyToMessageId || null,
       };
 
+      // Validate UUID before insert
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(streamId)) {
+        console.error('❌ INVALID STREAM UUID:', {
+          provided: streamId,
+          type: typeof streamId,
+          length: streamId?.length
+        });
+        throw new Error(`Invalid stream UUID format: ${streamId}`);
+      }
+
+      console.log('💾 Attempting to save message:', {
+        stream_id: streamId,
+        message_preview: message.substring(0, 50),
+        is_private: isPrivate,
+        sender_id: senderId
+      });
+
       const { data, error } = await supabase
         .from('chat_messages')
         .insert(messageData)
@@ -76,15 +94,26 @@ export class ChatService {
         .single();
 
       if (error) {
-        console.error('❌ Failed to save chat message:', error);
-        return null;
+        console.error('❌ DATABASE ERROR - Failed to save chat message:', {
+          error_message: error.message,
+          error_code: error.code,
+          error_details: error.details,
+          error_hint: error.hint,
+          full_error: JSON.stringify(error, null, 2),
+          attempted_data: messageData
+        });
+        throw error; // Throw instead of return null so caller can handle
       }
 
       console.log('✅ Chat message saved to Supabase:', data.id);
       return data;
-    } catch (error) {
-      console.error('❌ Error saving chat message:', error);
-      return null;
+    } catch (error: any) {
+      console.error('❌ EXCEPTION saving chat message:', {
+        message: error?.message,
+        stack: error?.stack,
+        full_error: error
+      });
+      throw error; // Re-throw so caller knows it failed
     }
   }
 

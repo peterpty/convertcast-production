@@ -605,32 +605,61 @@ export default function LiveViewerPage() {
 
   // Memoized callbacks for InstagramBar to prevent re-renders
   const handleInstagramSendMessage = useCallback(async (message: string, isPrivate: boolean) => {
-    if (!message.trim() || !streamData?.id) {
-      console.warn('⚠️ Cannot send message: No stream UUID available');
+    if (!message.trim()) {
+      console.warn('⚠️ Cannot send empty message');
+      return;
+    }
+
+    if (!streamData?.id) {
+      console.error('⚠️ Cannot send message: streamData.id is missing', {
+        streamData_exists: !!streamData,
+        streamData_id: streamData?.id,
+        streamData_keys: streamData ? Object.keys(streamData) : []
+      });
+      alert('Error: Stream ID not available. Please refresh the page.');
       return;
     }
 
     try {
+      console.log('📤 Viewer attempting to send message:', {
+        stream_id: streamData.id,
+        message_length: message.length,
+        is_private: isPrivate,
+        viewer_id: viewerId
+      });
+
       // CRITICAL: Use streamData.id (UUID) not streamId (playback ID)
       // Supabase Realtime will broadcast to all viewers with proper filtering
-      await ChatService.saveMessage(
+      const result = await ChatService.saveMessage(
         streamData.id, // ← FIXED: Use database UUID, not Mux playback ID
         message.trim(),
         viewerId, // username
-        null, // viewer_profile_id (we could add later if auth is added)
+        null, // viewer_profile_id
         false, // is_synthetic
         null, // intent_signals
         isPrivate, // is_private flag
-        viewerId // sender_id
+        viewerId, // sender_id
+        null, // reply_to_user_id
+        null // reply_to_message_id
       );
-      console.log('✅ Message saved successfully');
-    } catch (error) {
-      console.error('❌ Failed to send message:', error);
-      // TODO: Add toast notification for user feedback
+
+      if (result) {
+        console.log('✅ Viewer message saved successfully:', result.id);
+      } else {
+        console.error('❌ ChatService returned null - message not saved');
+        alert('Failed to send message. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('❌ VIEWER SEND ERROR:', {
+        error_message: error?.message,
+        error_stack: error?.stack,
+        full_error: error
+      });
+      alert(`Failed to send message: ${error?.message || 'Unknown error'}`);
     }
 
     // ✅ NO WebSocket broadcast - Supabase Realtime handles it with proper filtering
-  }, [viewerId, streamData]);
+  }, [viewerId, streamData?.id]); // Changed dependency to primitive
 
   const handleInstagramReaction = useCallback(() => {
     handleReaction('heart');

@@ -62,11 +62,25 @@ const DesktopChatSidebar: React.FC<DesktopChatSidebarProps> = memo(({
   const handleSend = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    if (!newMessage.trim() || isSending || !connected) return;
+    if (!newMessage.trim() || isSending || !connected) {
+      console.log('⏸️ Cannot send:', {
+        empty: !newMessage.trim(),
+        sending: isSending,
+        disconnected: !connected
+      });
+      return;
+    }
 
     setIsSending(true);
+    console.log('📤 Desktop chat attempting to send:', {
+      message: newMessage.substring(0, 50),
+      is_private: isPrivateMessage,
+      viewer_id: viewerId
+    });
+
     try {
       await onSendMessage(newMessage.trim(), isPrivateMessage);
+      console.log('✅ Desktop chat message sent successfully');
       setNewMessage('');
       setIsPrivateMessage(false);
 
@@ -74,12 +88,17 @@ const DesktopChatSidebar: React.FC<DesktopChatSidebarProps> = memo(({
       setTimeout(() => {
         inputRef.current?.focus();
       }, 0);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (error: any) {
+      console.error('❌ Desktop chat send failed:', {
+        error_message: error?.message,
+        error_stack: error?.stack,
+        full_error: error
+      });
+      alert(`Failed to send: ${error?.message || 'Unknown error'}`);
     } finally {
       setIsSending(false);
     }
-  }, [newMessage, isPrivateMessage, isSending, connected, onSendMessage]);
+  }, [newMessage, isPrivateMessage, isSending, connected, onSendMessage, viewerId]);
 
   // Toggle private mode
   const togglePrivate = useCallback(() => {

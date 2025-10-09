@@ -164,7 +164,7 @@ export type Database = {
           sender_id: string | null
           status: string
           stream_id: string
-          viewer_profile_id: string
+          viewer_profile_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -178,7 +178,7 @@ export type Database = {
           sender_id?: string | null
           status?: string
           stream_id: string
-          viewer_profile_id: string
+          viewer_profile_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -192,7 +192,7 @@ export type Database = {
           sender_id?: string | null
           status?: string
           stream_id?: string
-          viewer_profile_id?: string
+          viewer_profile_id?: string | null
         }
         Relationships: [
           {

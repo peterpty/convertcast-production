@@ -133,6 +133,12 @@ export default function LiveViewerPage() {
         const mediaEl = player.media;
         if (!mediaEl) return;
 
+        // CRITICAL: Check if duration is finite before doing live-lock logic
+        // For live streams, duration is Infinity until stream fully loads
+        if (!isFinite(mediaEl.duration) || !isFinite(mediaEl.currentTime)) {
+          return; // Stream not ready yet
+        }
+
         // For live streams, duration - currentTime = latency from live edge
         const latencyFromLive = mediaEl.duration - mediaEl.currentTime;
 
@@ -156,6 +162,11 @@ export default function LiveViewerPage() {
       try {
         const mediaEl = player.media;
         if (!mediaEl) return;
+
+        // CRITICAL: Check if duration is finite before doing live-lock logic
+        if (!isFinite(mediaEl.duration) || !isFinite(mediaEl.currentTime)) {
+          return; // Stream not ready yet
+        }
 
         const currentTime = mediaEl.currentTime;
 
@@ -204,7 +215,7 @@ export default function LiveViewerPage() {
       player.media.addEventListener('timeupdate', preventSeekBack);
       player.media.addEventListener('seeking', (e: Event) => {
         e.preventDefault();
-        if (player.media) {
+        if (player.media && isFinite(player.media.duration)) {
           player.media.currentTime = player.media.duration;
         }
       });

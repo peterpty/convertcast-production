@@ -283,11 +283,12 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
   // Load chat history from Supabase
   useEffect(() => {
     async function loadChatHistory() {
-      if (!streamId) return;
+      // CRITICAL: Use stream.id (UUID) not streamId (playback ID)
+      if (!stream?.id) return;
 
-      console.log('📜 Streamer: Loading chat history...');
+      console.log('📜 Streamer: Loading chat history for UUID:', stream.id);
       // Pass null for currentUserId and isHost=true so host sees ALL messages (public + all private)
-      const messages = await ChatService.getMessages(streamId, 50, null, true);
+      const messages = await ChatService.getMessages(stream.id, 50, null, true);
 
       if (messages.length > 0) {
         console.log(`✅ Streamer: Loaded ${messages.length} messages`);
@@ -307,14 +308,15 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
     }
 
     loadChatHistory();
-  }, [streamId]);
+  }, [stream]);
 
   // Subscribe to Supabase Realtime (fallback/redundancy)
   useEffect(() => {
-    if (!streamId) return;
+    // CRITICAL: Use stream.id (UUID) not streamId (playback ID)
+    if (!stream?.id) return;
 
-    console.log('📡 Streamer: Setting up Supabase Realtime subscription...');
-    const unsubscribe = ChatService.subscribeToMessages(streamId, (message) => {
+    console.log('📡 Streamer: Setting up Supabase Realtime subscription for UUID:', stream.id);
+    const unsubscribe = ChatService.subscribeToMessages(stream.id, (message) => {
       console.log('📨 Streamer: New message from Supabase Realtime');
 
       const formatted: ChatMessage = {
@@ -340,7 +342,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
       console.log('🔌 Streamer: Unsubscribing from Supabase Realtime');
       unsubscribe();
     };
-  }, [streamId]);
+  }, [stream]);
 
   // Listen for new messages from WebSocket
   useEffect(() => {
@@ -395,25 +397,32 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !stream?.id) return;
 
-    // Save message to database (Supabase Realtime will broadcast to all viewers)
-    await ChatService.saveMessage(
-      streamId,
-      newMessage.trim(),
-      'Streamer', // username
-      null, // viewer_profile_id
-      false, // is_synthetic
-      null, // intent_signals
-      isPrivateMessage || !!replyContext, // is_private (private if explicitly set OR replying)
-      'streamer', // sender_id
-      replyContext?.userId || null, // reply_to_user_id
-      replyContext?.messageId || null // reply_to_message_id
-    );
+    try {
+      // CRITICAL: Use stream.id (UUID) not streamId (playback ID)
+      // Save message to database (Supabase Realtime will broadcast to all viewers)
+      await ChatService.saveMessage(
+        stream.id, // ← FIXED: Use database UUID
+        newMessage.trim(),
+        'Streamer', // username
+        null, // viewer_profile_id
+        false, // is_synthetic
+        null, // intent_signals
+        isPrivateMessage || !!replyContext, // is_private (private if explicitly set OR replying)
+        'streamer', // sender_id
+        replyContext?.userId || null, // reply_to_user_id
+        replyContext?.messageId || null // reply_to_message_id
+      );
 
-    setNewMessage('');
-    setIsPrivateMessage(false); // Reset to public after sending
-    setReplyContext(null); // Clear reply context
+      console.log('✅ Streamer: Message saved successfully');
+      setNewMessage('');
+      setIsPrivateMessage(false); // Reset to public after sending
+      setReplyContext(null); // Clear reply context
+    } catch (error) {
+      console.error('❌ Streamer: Failed to send message:', error);
+      // TODO: Show error toast to user
+    }
   };
 
   // Pin/unpin message handler

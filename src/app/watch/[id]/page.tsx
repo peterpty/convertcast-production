@@ -120,8 +120,10 @@ export default function LiveViewerPage() {
     };
   }, [isMobileView, orientation.isLandscape]);
 
-  // LIVE-LOCK: Force player to always stay at live edge, prevent seeking
+  // LIVE-LOCK: TEMPORARILY DISABLED to fix mobile crash
+  // TODO: Re-enable after fixing Infinity handling
   useEffect(() => {
+    return; // ← EMERGENCY FIX: Skip entire live-lock system
     const player = muxPlayerRef.current;
     if (!player) return;
 

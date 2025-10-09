@@ -308,7 +308,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
     }
 
     loadChatHistory();
-  }, [stream]);
+  }, [stream?.id]); // Use primitive ID, not object reference
 
   // Subscribe to Supabase Realtime (fallback/redundancy)
   useEffect(() => {
@@ -342,7 +342,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
       console.log('🔌 Streamer: Unsubscribing from Supabase Realtime');
       unsubscribe();
     };
-  }, [stream]);
+  }, [stream?.id]); // Use primitive ID, not object reference
 
   // Listen for new messages from WebSocket
   useEffect(() => {

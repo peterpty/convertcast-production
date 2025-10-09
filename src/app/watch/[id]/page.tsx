@@ -395,7 +395,7 @@ export default function LiveViewerPage() {
     }
 
     loadChatHistory();
-  }, [streamData, viewerId]);
+  }, [streamData?.id, viewerId]); // Use primitive ID, not object reference
 
   // Subscribe to Supabase Realtime for chat messages (fallback/redundancy)
   useEffect(() => {
@@ -432,7 +432,7 @@ export default function LiveViewerPage() {
       console.log('🔌 Cleaning up Supabase Realtime subscription');
       unsubscribe();
     };
-  }, [streamData, viewerId]);
+  }, [streamData?.id, viewerId]); // Use primitive ID, not object reference
 
   // Clean up old floating reactions after 10 seconds
   useEffect(() => {

@@ -693,14 +693,27 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
                 <div>
                   <h2 className="text-white font-bold text-xl">Studio Preview</h2>
                   <div className="flex items-center gap-3 mt-1">
+                    {/* RTMP Connection Status */}
                     <div className={`flex items-center gap-2 text-sm font-semibold ${
-                      streamHealth?.status === 'offline' ? 'text-gray-400' : 'text-green-400'
+                      streamHealth?.status === 'active' ? 'text-green-400' :
+                      streamHealth?.status === 'idle' ? 'text-yellow-400' :
+                      'text-gray-400'
                     }`}>
                       <div className={`w-2 h-2 rounded-full ${
-                        streamHealth?.status === 'offline' ? 'bg-gray-400' : 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50'
+                        streamHealth?.status === 'active' ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50' :
+                        streamHealth?.status === 'idle' ? 'bg-yellow-400 animate-pulse shadow-lg shadow-yellow-400/50' :
+                        'bg-gray-400'
                       }`}></div>
-                      {streamHealth?.status === 'offline' ? 'OFFLINE' : 'LIVE'}
+                      {streamHealth?.status === 'active' ? '🔴 LIVE' :
+                       streamHealth?.status === 'idle' ? '⏳ WAITING FOR OBS' :
+                       'OFFLINE'}
                     </div>
+                    {/* Show status message on hover */}
+                    {streamHealth?.message && (
+                      <div className="text-xs text-gray-400 italic" title={streamHealth.message}>
+                        {streamHealth.status === 'idle' ? 'Connect OBS to start' : ''}
+                      </div>
+                    )}
                     <div className="text-sm text-white font-semibold">
                       {viewerCount} viewers
                     </div>
@@ -740,7 +753,7 @@ export function StudioDashboard({ stream }: StudioDashboardProps) {
               overlayState={overlayState}
               viewerCount={viewerCount}
               muxPlaybackId={muxStream?.playback_id || undefined}
-              isLive={streamHealth?.status === 'active' && stream.status === 'live'}
+              isLive={streamHealth?.status === 'active'}
               reactions={floatingReactions}
             />
           </div>

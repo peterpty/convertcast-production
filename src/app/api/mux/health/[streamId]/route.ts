@@ -25,23 +25,45 @@ export async function GET(
 
       const isActive = stream.status === 'active';
       const isIdle = stream.status === 'idle';
+      const isDisconnected = stream.status === 'disconnected';
 
       console.log(`📊 Real Mux status: ${stream.status}`);
-      console.log(`🔌 Connected: ${isActive ? 'YES' : 'NO'}`);
+      console.log(`🔌 RTMP Connected: ${isActive ? 'YES ✅' : 'NO ❌'}`);
+      console.log(`📡 Stream State: ${isActive ? 'BROADCASTING' : isIdle ? 'WAITING FOR OBS' : 'DISCONNECTED'}`);
 
-      // Return REAL health status
+      // Map Mux status to UI-friendly status
+      // 'active' = OBS connected and streaming ✅
+      // 'idle' = Stream created but OBS not connected ⏳
+      // 'disconnected' = Was active but lost connection ❌
+      let healthStatus: 'active' | 'idle' | 'offline';
+      let healthMessage: string;
+
+      if (isActive) {
+        healthStatus = 'active';
+        healthMessage = 'OBS connected - Broadcasting live';
+      } else if (isIdle) {
+        healthStatus = 'idle';
+        healthMessage = 'Waiting for OBS connection - Connect OBS with your stream key';
+      } else {
+        healthStatus = 'offline';
+        healthMessage = isDisconnected ? 'Stream disconnected - Reconnect OBS' : 'Stream offline';
+      }
+
+      // Return REAL health status with clear RTMP connection info
       const health = {
-        status: isActive ? 'excellent' : 'disconnected',
+        status: healthStatus, // 'active' | 'idle' | 'offline'
+        rtmp_connected: isActive, // Boolean: Is OBS connected?
+        mux_status: stream.status, // Raw Mux status: 'active' | 'idle' | 'disconnected' | 'disabled'
+        message: healthMessage, // Human-readable status message
         bitrate: isActive ? 2500000 : 0,
         framerate: isActive ? 30 : 0,
         resolution: isActive ? '1920x1080' : 'N/A',
         latency: isActive ? 2000 : 0,
         uptime: 0,
         viewer_count: 0,
-        connection_quality: isActive ? 95 : 0,
+        connection_quality: isActive ? 95 : isIdle ? 50 : 0,
         last_updated: new Date(),
-        issues: isActive ? [] : ['No active stream connection'],
-        mux_status: stream.status // Include raw Mux status
+        issues: isActive ? [] : [healthMessage]
       };
 
       console.log(`✅ Returning REAL health status: ${health.status}`);
@@ -54,11 +76,14 @@ export async function GET(
     } catch (muxError) {
       console.error('❌ Failed to get Mux stream status:', muxError);
 
-      // Fallback to disconnected state
+      // Fallback to offline state
       return NextResponse.json({
         success: true,
         health: {
-          status: 'disconnected',
+          status: 'offline',
+          rtmp_connected: false,
+          mux_status: 'unknown',
+          message: 'Failed to retrieve stream status',
           bitrate: 0,
           framerate: 0,
           resolution: 'N/A',
@@ -67,8 +92,7 @@ export async function GET(
           viewer_count: 0,
           connection_quality: 0,
           last_updated: new Date(),
-          issues: ['Failed to retrieve stream status'],
-          mux_status: 'unknown'
+          issues: ['Failed to retrieve stream status']
         },
         timestamp: new Date().toISOString()
       });

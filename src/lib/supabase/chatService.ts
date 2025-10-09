@@ -192,8 +192,52 @@ export class ChatService {
   ): () => void {
     console.log('📡 Setting up Supabase Realtime subscription for stream:', streamId);
 
+    const handleMessage = async (payload: any, eventType: string) => {
+      console.log(`📨 ${eventType} event from Supabase Realtime:`, payload);
+
+      // Fetch the message with profile data
+      const messageId = payload.new?.id || payload.old?.id;
+      if (!messageId) {
+        console.error('❌ No message ID in payload');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select(`
+          id,
+          message,
+          created_at,
+          stream_id,
+          viewer_profile_id,
+          is_synthetic,
+          is_private,
+          sender_id,
+          reply_to_user_id,
+          reply_to_message_id,
+          status,
+          intent_signals,
+          viewer_profiles (
+            id,
+            email,
+            first_name,
+            last_name
+          )
+        `)
+        .eq('id', messageId)
+        .single();
+
+      if (data && !error) {
+        console.log('✅ Broadcasting message to UI:', { id: data.id, status: data.status });
+        onMessage(data as ChatMessageWithProfile);
+      } else {
+        console.error('❌ Failed to fetch message data:', error);
+      }
+    };
+
     const channel = supabase
       .channel(`chat:${streamId}`)
+      // Listen for new messages (INSERT)
       .on(
         'postgres_changes',
         {
@@ -202,39 +246,18 @@ export class ChatService {
           table: 'chat_messages',
           filter: `stream_id=eq.${streamId}`,
         },
-        async (payload) => {
-          console.log('📨 New chat message from Supabase Realtime:', payload.new);
-
-          // Fetch the message with profile data
-          const { data, error } = await supabase
-            .from('chat_messages')
-            .select(`
-              id,
-              message,
-              created_at,
-              stream_id,
-              viewer_profile_id,
-              is_synthetic,
-              is_private,
-              sender_id,
-              reply_to_user_id,
-              reply_to_message_id,
-              status,
-              intent_signals,
-              viewer_profiles (
-                id,
-                email,
-                first_name,
-                last_name
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single();
-
-          if (data && !error) {
-            onMessage(data as ChatMessageWithProfile);
-          }
-        }
+        (payload) => handleMessage(payload, 'INSERT')
+      )
+      // Listen for message updates (UPDATE) - for pin/unpin
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `stream_id=eq.${streamId}`,
+        },
+        (payload) => handleMessage(payload, 'UPDATE')
       )
       .subscribe((status) => {
         console.log(`📡 Supabase Realtime status for chat:${streamId}:`, status);

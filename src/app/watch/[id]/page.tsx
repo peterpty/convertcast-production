@@ -423,9 +423,18 @@ export default function LiveViewerPage() {
       }
 
       setChatMessages(prev => {
-        const exists = prev.some(m => m.id === message.id);
-        if (exists) return prev;
-        return [...prev, message];
+        const existingIndex = prev.findIndex(m => m.id === message.id);
+        if (existingIndex >= 0) {
+          // UPDATE event - replace existing message (for pin/unpin)
+          const updated = [...prev];
+          updated[existingIndex] = message;
+          console.log('✅ Updated message in UI:', { id: message.id, status: message.status });
+          return updated;
+        } else {
+          // INSERT event - add new message
+          console.log('✅ Added new message to UI:', { id: message.id });
+          return [...prev, message];
+        }
       });
     });
 
@@ -485,38 +494,34 @@ export default function LiveViewerPage() {
         let stream = muxResult.data;
         let streamError = muxResult.error;
 
-        if (!stream) {
-          if (streamId.length > 20 && (streamId.includes('_') || streamId.length > 30)) {
-            console.log('⚠️ Viewer: Database lookup failed, creating minimal fallback data');
-            stream = {
-              id: streamId,
-              mux_playback_id: streamId,
-              status: 'active',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              event_id: 'unknown',
-              mux_stream_id: null,
-              viewer_count: 0,
-              peak_viewers: 0,
-              events: {
-                id: 'unknown',
-                title: 'Live Stream',
-                description: '',
-                scheduled_start: new Date().toISOString(),
-                scheduled_end: new Date(Date.now() + 3600000).toISOString(),
-                status: 'live',
-                user_id: 'unknown'
-              }
-            } as StreamWithEvent;
-            streamError = null;
-          }
-        }
-
-        if (streamError || !stream) {
-          setError('Stream not found or not available');
+        // CRITICAL: Never use fallback with playback ID as database ID
+        // If stream doesn't exist in database, we MUST show error
+        if (!stream || streamError) {
+          console.error('❌ Viewer: Stream not found in database', {
+            playback_id: streamId,
+            error: streamError
+          });
+          setError('Stream not found. Please check the URL or contact the host.');
           setLoading(false);
           return;
         }
+
+        // Validate we have a proper database UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(stream.id)) {
+          console.error('❌ Viewer: Stream has invalid database UUID', {
+            stream_id: stream.id,
+            playback_id: streamId
+          });
+          setError('Stream data is corrupted. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Viewer: Stream loaded successfully', {
+          database_uuid: stream.id,
+          playback_id: stream.mux_playback_id
+        });
 
         setStreamData(stream as StreamWithEvent);
         setViewerCount(stream.viewer_count || 0);

@@ -120,119 +120,14 @@ export default function LiveViewerPage() {
     };
   }, [isMobileView, orientation.isLandscape]);
 
-  // LIVE-LOCK: TEMPORARILY DISABLED to fix mobile crash
-  // TODO: Re-enable after fixing Infinity handling
+  // LIVE-LOCK: COMPLETELY DISABLED - Mobile fix
+  // Entire feature removed to prevent mobile crashes from Infinity duration bugs
+  // This allows users to pause/seek (acceptable trade-off for MVP)
+  // TODO: Reimplement with proper Infinity handling after mobile is stable
   useEffect(() => {
-    return; // ← EMERGENCY FIX: Skip entire live-lock system
-    const player = muxPlayerRef.current;
-    if (!player) return;
-
-    let lastLivePosition = 0;
-
-    // Monitor and enforce live position
-    const enforceLivePosition = () => {
-      try {
-        const mediaEl = player.media;
-        if (!mediaEl) return;
-
-        // CRITICAL: Check if duration is finite before doing live-lock logic
-        // For live streams, duration is Infinity until stream fully loads
-        if (!isFinite(mediaEl.duration) || !isFinite(mediaEl.currentTime)) {
-          return; // Stream not ready yet
-        }
-
-        // For live streams, duration - currentTime = latency from live edge
-        const latencyFromLive = mediaEl.duration - mediaEl.currentTime;
-
-        // If viewer has drifted more than 3 seconds from live, snap back
-        if (latencyFromLive > 3) {
-          console.log('🔒 Live-lock: Snapping back to live edge (drift:', latencyFromLive.toFixed(2), 's)');
-          mediaEl.currentTime = mediaEl.duration;
-        }
-
-        lastLivePosition = mediaEl.currentTime;
-      } catch (err) {
-        // Silently handle errors
-      }
-    };
-
-    // Check live position every second
-    const interval = setInterval(enforceLivePosition, 1000);
-
-    // Block seek attempts via timeupdate
-    const preventSeekBack = (e: Event) => {
-      try {
-        const mediaEl = player.media;
-        if (!mediaEl) return;
-
-        // CRITICAL: Check if duration is finite before doing live-lock logic
-        if (!isFinite(mediaEl.duration) || !isFinite(mediaEl.currentTime)) {
-          return; // Stream not ready yet
-        }
-
-        const currentTime = mediaEl.currentTime;
-
-        // If user seeked backward (more than 1 second), snap to live
-        if (lastLivePosition - currentTime > 1) {
-          console.log('🔒 Live-lock: Blocked seek attempt');
-          mediaEl.currentTime = mediaEl.duration;
-
-          // Haptic feedback to indicate blocking
-          if (navigator.vibrate) {
-            navigator.vibrate([50, 50, 50]);
-          }
-        }
-
-        lastLivePosition = currentTime;
-      } catch (err) {
-        // Silently handle errors
-      }
-    };
-
-    // Block keyboard seeking
-    const preventKeyboardSeek = (e: KeyboardEvent) => {
-      // CRITICAL: Don't block keyboard if user is typing in an input/textarea
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        return; // Allow normal typing, including spacebar
-      }
-
-      const seekKeys = ['ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '];
-
-      if (seekKeys.includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        console.log('🔒 Live-lock: Blocked keyboard seek:', e.key);
-
-        // Visual feedback
-        if (navigator.vibrate) {
-          navigator.vibrate(30);
-        }
-      }
-    };
-
-    // Attach listeners
-    if (player.media) {
-      player.media.addEventListener('timeupdate', preventSeekBack);
-      player.media.addEventListener('seeking', (e: Event) => {
-        e.preventDefault();
-        if (player.media && isFinite(player.media.duration)) {
-          player.media.currentTime = player.media.duration;
-        }
-      });
-    }
-
-    document.addEventListener('keydown', preventKeyboardSeek);
-
-    return () => {
-      clearInterval(interval);
-      if (player.media) {
-        player.media.removeEventListener('timeupdate', preventSeekBack);
-      }
-      document.removeEventListener('keydown', preventKeyboardSeek);
-    };
-  }, [muxPlayerRef.current]);
+    // Empty - live-lock feature disabled
+    console.log('ℹ️ Live-lock feature disabled for mobile compatibility');
+  }, []);
 
   // Transform WebSocket overlay data to OverlayState format
   const overlayState = overlayData ? {

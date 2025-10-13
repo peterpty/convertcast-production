@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Send, Unlock, Heart, Pin, Reply } from 'lucide-react';
-import { useOrientation } from '@/hooks/useOrientation';
+// REMOVED: useOrientation import - was never used in component
 
 export interface ChatMessage {
   id: string;
@@ -30,7 +30,7 @@ export function MobileChatStack({
 }: MobileChatStackProps) {
   const [inputMessage, setInputMessage] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
-  const orientation = useOrientation();
+  // REMOVED: const orientation = useOrientation(); - dead code, never used
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Show only last 5 messages (or 6 if one is pinned)

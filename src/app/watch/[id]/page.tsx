@@ -17,11 +17,12 @@ import { MobileControls } from '@/components/viewer/MobileControls';
 import { RotateScreen } from '@/components/viewer/RotateScreen';
 import { MuteToggle } from '@/components/viewer/MuteToggle';
 import DesktopChatSidebar from '@/components/viewer/DesktopChatSidebar';
-import { useOrientation } from '@/hooks/useOrientation';
-import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
-import { useLandscapeLock } from '@/hooks/useLandscapeLock';
-import { useMobileDetection } from '@/hooks/useMobileDetection';
-import { useAutoHide } from '@/hooks/useAutoHide';
+// MOBILE HOOKS TEMPORARILY DISABLED FOR DEBUGGING
+// import { useOrientation } from '@/hooks/useOrientation';
+// import { useKeyboardDetection } from '@/hooks/useKeyboardDetection';
+// import { useLandscapeLock } from '@/hooks/useLandscapeLock';
+// import { useMobileDetection } from '@/hooks/useMobileDetection';
+// import { useAutoHide } from '@/hooks/useAutoHide';
 import '@/styles/instagram-overlays.css';
 import {
   Users,
@@ -68,14 +69,37 @@ export default function LiveViewerPage() {
   const chatRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const muxPlayerRef = useRef<any>(null);
-  const orientation = useOrientation();
-  const keyboardState = useKeyboardDetection();
-  // DISABLED: useLandscapeLock() - Causes mobile crashes
-  // const landscapeLock = useLandscapeLock();
-  const { isMobile: isMobileDevice } = useMobileDetection();
 
-  // Auto-hide controls on mobile landscape
-  const controlsAutoHide = useAutoHide({ timeout: 3000, initiallyVisible: true });
+  // SIMPLE MOBILE DETECTION (no custom hooks)
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [orientation, setOrientation] = useState({ isLandscape: false, isPortrait: true, type: 'portrait' as const, angle: 0 });
+  const keyboardState = { isOpen: false, height: 0 };
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const controlsAutoHide = {
+    show: () => setControlsVisible(true),
+    hide: () => setControlsVisible(false),
+    visible: controlsVisible
+  };
+
+  // Detect mobile on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobile = window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      setIsMobileDevice(isMobile);
+
+      const isLandscape = window.innerWidth > window.innerHeight;
+      setOrientation({
+        isLandscape,
+        isPortrait: !isLandscape,
+        type: isLandscape ? 'landscape' : 'portrait',
+        angle: 0
+      });
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Generate a unique viewer ID for this session
   const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);

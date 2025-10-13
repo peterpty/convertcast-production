@@ -332,7 +332,18 @@ export default function LiveViewerPage() {
   }, [streamData?.id, viewerId]); // Use primitive ID, not object reference
 
   // Subscribe to Supabase Realtime for chat messages (fallback/redundancy)
+  // 🔴 TEMPORARILY DISABLED FOR MOBILE CRASH DEBUGGING 🔴
+  // Testing hypothesis: Supabase Realtime subscription causes mobile Chrome crash
   useEffect(() => {
+    console.log('⚠️ [DEBUG] Supabase Realtime subscription DISABLED for mobile crash testing');
+    console.log('⚠️ [DEBUG] If mobile stops crashing, Realtime is the culprit');
+
+    // Early return - no subscription setup
+    return () => {
+      console.log('⚠️ [DEBUG] No Realtime cleanup needed (subscription disabled)');
+    };
+
+    /* ORIGINAL CODE - COMMENTED OUT FOR TESTING
     // CRITICAL: Use streamData.id (UUID) not streamId (playback ID)
     if (!streamData?.id) return;
 
@@ -375,6 +386,7 @@ export default function LiveViewerPage() {
       console.log('🔌 Cleaning up Supabase Realtime subscription');
       unsubscribe();
     };
+    */
   }, [streamData?.id, viewerId]); // Use primitive ID, not object reference
 
   // Clean up old floating reactions after 10 seconds

@@ -70,7 +70,8 @@ export default function LiveViewerPage() {
   const muxPlayerRef = useRef<any>(null);
   const orientation = useOrientation();
   const keyboardState = useKeyboardDetection();
-  const landscapeLock = useLandscapeLock();
+  // DISABLED: useLandscapeLock() - Causes mobile crashes
+  // const landscapeLock = useLandscapeLock();
   const { isMobile: isMobileDevice } = useMobileDetection();
 
   // Auto-hide controls on mobile landscape

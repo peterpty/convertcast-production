@@ -774,6 +774,8 @@ export default function LiveViewerPage() {
                             streamId={streamId}
                             connected={connected}
                             reactions={[]}
+                            isMobile={isMobileView}
+                            isLandscape={orientation.isLandscape}
                           />
                         </div>
                       )}

@@ -101,6 +101,17 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
             elem.msRequestFullscreen();
           }
           setIsFullscreen(true);
+
+          // Lock orientation to landscape on mobile
+          if (isMobile && screen.orientation?.lock) {
+            try {
+              await screen.orientation.lock('landscape').catch((err) => {
+                console.log('Orientation lock not supported or failed:', err);
+              });
+            } catch (err) {
+              console.log('Orientation lock API not available');
+            }
+          }
         } else {
           if (doc.exitFullscreen) {
             await doc.exitFullscreen();
@@ -112,6 +123,15 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
             doc.msExitFullscreen();
           }
           setIsFullscreen(false);
+
+          // Unlock orientation when exiting fullscreen on mobile
+          if (isMobile && screen.orientation?.unlock) {
+            try {
+              screen.orientation.unlock();
+            } catch (err) {
+              console.log('Orientation unlock not available');
+            }
+          }
         }
 
         // Haptic feedback

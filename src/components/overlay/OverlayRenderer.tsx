@@ -68,9 +68,11 @@ interface OverlayRendererProps {
   streamId: string;
   connected: boolean;
   reactions?: ReactionItem[];
+  isMobile?: boolean;
+  isLandscape?: boolean;
 }
 
-export function OverlayRenderer({ overlayState, viewerCount, streamId, connected, reactions = [] }: OverlayRendererProps) {
+export function OverlayRenderer({ overlayState, viewerCount, streamId, connected, reactions = [], isMobile = false, isLandscape = false }: OverlayRendererProps) {
   const [countdown, setCountdown] = useState('');
 
   // Update countdown timer
@@ -498,6 +500,8 @@ export function OverlayRenderer({ overlayState, viewerCount, streamId, connected
             // This would typically be handled by the parent component
             console.log('Celebration completed');
           }}
+          isMobile={isMobile}
+          isLandscape={isLandscape}
         />
       )}
 

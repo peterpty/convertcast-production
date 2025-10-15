@@ -23,9 +23,11 @@ export interface CelebrationState {
 interface CelebrationOverlayProps {
   celebration: CelebrationState;
   onComplete?: () => void;
+  isMobile?: boolean;
+  isLandscape?: boolean;
 }
 
-export function CelebrationOverlay({ celebration, onComplete }: CelebrationOverlayProps) {
+export function CelebrationOverlay({ celebration, onComplete, isMobile = false, isLandscape = false }: CelebrationOverlayProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -89,7 +91,11 @@ export function CelebrationOverlay({ celebration, onComplete }: CelebrationOverl
           >
             {/* Instagram-style celebration container */}
             <motion.div
-              className="relative flex flex-col items-center max-w-md w-full mx-4"
+              className={`relative flex flex-col items-center w-full mx-4 ${
+                isMobile && !isLandscape ? 'max-w-[280px]' :
+                isMobile && isLandscape ? 'max-w-sm' :
+                'max-w-md'
+              }`}
               initial={{ scale: 0.3, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.3, y: -50 }}
@@ -119,9 +125,15 @@ export function CelebrationOverlay({ celebration, onComplete }: CelebrationOverl
                   <motion.img
                     src={celebration.gifUrl}
                     alt="Celebration"
-                    className="w-full max-w-[400px] h-auto rounded-2xl shadow-lg"
+                    className={`w-full h-auto rounded-2xl shadow-lg ${
+                      isMobile && !isLandscape ? 'max-w-[250px]' :
+                      isMobile && isLandscape ? 'max-w-[300px]' :
+                      'max-w-[400px]'
+                    }`}
                     style={{
-                      maxHeight: '300px',
+                      maxHeight: isMobile && !isLandscape ? '180px' :
+                                 isMobile && isLandscape ? '200px' :
+                                 '300px',
                       objectFit: 'contain',
                       filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))'
                     }}
@@ -144,7 +156,11 @@ export function CelebrationOverlay({ celebration, onComplete }: CelebrationOverl
               {/* Message in Instagram-style pill */}
               {celebration.message && (
                 <motion.div
-                  className="relative px-8 py-4 rounded-full backdrop-blur-xl shadow-2xl text-center max-w-sm"
+                  className={`relative rounded-full backdrop-blur-xl shadow-2xl text-center ${
+                    isMobile && !isLandscape ? 'px-6 py-3 max-w-[260px]' :
+                    isMobile && isLandscape ? 'px-7 py-3.5 max-w-xs' :
+                    'px-8 py-4 max-w-sm'
+                  }`}
                   style={{
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
@@ -160,7 +176,11 @@ export function CelebrationOverlay({ celebration, onComplete }: CelebrationOverl
 
                   <div className="relative z-10">
                     <span
-                      className="text-white font-bold text-xl tracking-wide drop-shadow-lg"
+                      className={`text-white font-bold tracking-wide drop-shadow-lg ${
+                        isMobile && !isLandscape ? 'text-base' :
+                        isMobile && isLandscape ? 'text-lg' :
+                        'text-xl'
+                      }`}
                       style={{ fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}
                     >
                       {celebration.message}

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 export interface Reaction {
@@ -25,51 +24,23 @@ export interface TouchReactionsProps {
   className?: string;
 }
 
-interface FloatingEmoji {
-  id: string;
-  emoji: string;
-  x: number;
-  y: number;
-}
-
 export function TouchReactions({
   reactions = defaultReactions,
   onReaction,
   className = '',
 }: TouchReactionsProps) {
-  const [floatingEmojis, setFloatingEmojis] = useState<FloatingEmoji[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const handleReaction = (reaction: Reaction) => {
     // Haptic feedback if supported
     if (navigator.vibrate) {
       navigator.vibrate(50);
     }
 
-    // Trigger callback
+    // Trigger callback to parent (parent handles floating emoji rendering)
     onReaction(reaction.id);
-
-    // Create floating emoji
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const newEmoji: FloatingEmoji = {
-        id: `${reaction.id}-${Date.now()}`,
-        emoji: reaction.emoji,
-        x: Math.random() * rect.width,
-        y: rect.height / 2,
-      };
-
-      setFloatingEmojis((prev) => [...prev, newEmoji]);
-
-      // Remove after animation
-      setTimeout(() => {
-        setFloatingEmojis((prev) => prev.filter((e) => e.id !== newEmoji.id));
-      }, 4000);
-    }
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       {/* Reaction Buttons */}
       <div className="flex items-center justify-around gap-2 px-4 py-3 bg-gradient-to-b from-slate-900/80 to-slate-950/90 backdrop-blur-xl border-y border-purple-500/20">
         {reactions.map((reaction) => (
@@ -103,30 +74,6 @@ export function TouchReactions({
               <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95" />
             </div>
           </motion.button>
-        ))}
-      </div>
-
-      {/* Floating Emojis */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {floatingEmojis.map((emoji) => (
-          <motion.div
-            key={emoji.id}
-            initial={{ opacity: 0, y: emoji.y, x: emoji.x, scale: 0.8 }}
-            animate={{
-              opacity: [0, 1, 1, 0],
-              y: emoji.y - 150,
-              x: emoji.x + (Math.random() - 0.5) * 40,
-              scale: [0.8, 1, 0.3],
-              rotate: (Math.random() - 0.5) * 30,
-            }}
-            transition={{
-              duration: 4,
-              ease: [0.25, 0.46, 0.45, 0.94],
-            }}
-            className="absolute text-4xl filter drop-shadow-lg"
-          >
-            {emoji.emoji}
-          </motion.div>
         ))}
       </div>
     </div>

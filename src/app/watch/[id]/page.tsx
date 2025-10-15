@@ -6,16 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import { ChatService } from '@/lib/supabase/chatService';
 import type { Database } from '@/types/database';
-import MuxPlayer from '@mux/mux-player-react';
 import { useWebSocket } from '@/lib/websocket/useWebSocket';
 import { WebSocketErrorBoundary } from '@/components/websocket/WebSocketErrorBoundary';
 import { WebSocketDebugPanel } from '@/components/debug/WebSocketDebugPanel';
 import { OverlayRenderer } from '@/components/overlay/OverlayRenderer';
 import { MobileChatStack, type ChatMessage as MobileChatMessage } from '@/components/viewer/MobileChatStack';
 import { TouchReactions } from '@/components/viewer/TouchReactions';
-import { MobileControls } from '@/components/viewer/MobileControls';
-import { RotateScreen } from '@/components/viewer/RotateScreen';
-import { MuteToggle } from '@/components/viewer/MuteToggle';
+import { SimpleLivePlayer } from '@/components/viewer/SimpleLivePlayer';
 import DesktopChatSidebar from '@/components/viewer/DesktopChatSidebar';
 // MOBILE HOOKS TEMPORARILY DISABLED FOR DEBUGGING
 // import { useOrientation } from '@/hooks/useOrientation';
@@ -67,19 +64,12 @@ export default function LiveViewerPage() {
   const params = useParams();
   const streamId = params.id as string;
   const chatRef = useRef<HTMLDivElement>(null);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
   const muxPlayerRef = useRef<any>(null);
 
   // SIMPLE MOBILE DETECTION (no custom hooks)
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [orientation, setOrientation] = useState({ isLandscape: false, isPortrait: true, type: 'portrait' as const, angle: 0 });
   const keyboardState = { isOpen: false, height: 0 };
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const controlsAutoHide = {
-    show: () => setControlsVisible(true),
-    hide: () => setControlsVisible(false),
-    visible: controlsVisible
-  };
 
   // Detect mobile on mount
   useEffect(() => {
@@ -126,7 +116,6 @@ export default function LiveViewerPage() {
 
   // Mobile-specific state
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(true); // Start muted (matches autoPlay="muted" for browser policy)
 
   // Use robust mobile detection that survives rotation
@@ -623,87 +612,7 @@ export default function LiveViewerPage() {
     console.log('Open more menu');
   }, []);
 
-  // Fullscreen handlers - iOS compatible
-  const toggleFullscreen = async () => {
-    const container = videoContainerRef.current;
-    if (!container) return;
-
-    try {
-      const doc: any = document;
-      const elem: any = container;
-
-      // Check if already in fullscreen
-      const isCurrentlyFullscreen = !!(
-        doc.fullscreenElement ||
-        doc.webkitFullscreenElement ||
-        doc.mozFullScreenElement ||
-        doc.msFullscreenElement
-      );
-
-      if (!isCurrentlyFullscreen) {
-        // Enter fullscreen with vendor prefixes
-        if (elem.requestFullscreen) {
-          await elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) {
-          elem.webkitRequestFullscreen(); // iOS Safari
-        } else if (elem.webkitEnterFullscreen) {
-          elem.webkitEnterFullscreen(); // iOS video element
-        } else if (elem.mozRequestFullScreen) {
-          elem.mozRequestFullScreen();
-        } else if (elem.msRequestFullscreen) {
-          elem.msRequestFullscreen();
-        }
-        setIsFullscreen(true);
-      } else {
-        // Exit fullscreen with vendor prefixes
-        if (doc.exitFullscreen) {
-          await doc.exitFullscreen();
-        } else if (doc.webkitExitFullscreen) {
-          doc.webkitExitFullscreen();
-        } else if (doc.mozCancelFullScreen) {
-          doc.mozCancelFullScreen();
-        } else if (doc.msExitFullscreen) {
-          doc.msExitFullscreen();
-        }
-        setIsFullscreen(false);
-      }
-
-      // Haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate(30);
-      }
-    } catch (err) {
-      console.error('Fullscreen error:', err);
-    }
-  };
-
-  // Listen for fullscreen changes (with vendor prefixes)
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const doc: any = document;
-      const isFullscreen = !!(
-        doc.fullscreenElement ||
-        doc.webkitFullscreenElement ||
-        doc.mozFullScreenElement ||
-        doc.msFullscreenElement
-      );
-      setIsFullscreen(isFullscreen);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-    };
-  }, []);
-
-  // Mute/unmute handler
+  // Mute/unmute handler (SimpleLivePlayer handles fullscreen internally)
   const toggleMute = () => {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
@@ -801,76 +710,74 @@ export default function LiveViewerPage() {
         {/* Main Content - Mobile First */}
         <div className={`${isMobileView && orientation.isLandscape ? 'mobile-landscape-no-container' : 'container mx-auto md:px-4 md:py-6'}`}>
           <div className={`${isMobileView ? '' : 'grid lg:grid-cols-4 gap-6'}`}>
-            {/* Video Player - Fullscreen on Mobile Landscape */}
+            {/* Video Player - Unified for Desktop & Mobile */}
             <div className={`${isMobileView ? '' : 'lg:col-span-3'}`}>
-              <div
-                ref={videoContainerRef}
-                onClick={() => {
-                  // Tap anywhere to show controls on mobile landscape
-                  if (isMobileView && orientation.isLandscape) {
-                    controlsAutoHide.show();
-                  }
-                }}
-                className={`relative bg-black overflow-hidden ${
-                  isMobileView && orientation.isLandscape
-                    ? 'video-immersive-container cursor-pointer'
-                    : isMobileView
-                    ? ''
-                    : 'rounded-2xl shadow-2xl'
-                }`}
-              >
-                <div className={`${
-                  isMobileView && orientation.isLandscape
-                    ? 'w-full h-full'
-                    : isMobileView
-                    ? 'w-full h-[56vw] max-h-[70vh]'
-                    : 'aspect-video'
-                }`}>
+              <div className={`relative ${isMobileView ? '' : 'rounded-2xl shadow-2xl overflow-hidden'}`}>
+                <div
+                  className={`${
+                    isMobileView && orientation.isLandscape
+                      ? 'fixed inset-0 z-40'
+                      : isMobileView
+                      ? 'w-full h-[56vw] max-h-[70vh]'
+                      : 'aspect-video'
+                  }`}
+                >
                   {streamData.mux_playback_id ? (
-                    <MuxPlayer
-                      ref={muxPlayerRef}
-                      streamType="live"
-                      playbackId={streamData.mux_playback_id}
-                      targetLiveWindow={0}
-                      metadata={{
-                        video_id: streamData.id,
-                        video_title: streamData.events.title,
-                        viewer_user_id: 'anonymous'
-                      }}
-                      autoPlay="muted"
-                      muted={isMuted}
-                      accentColor="transparent"
-                      primaryColor="rgba(255, 255, 255, 0.1)"
-                      secondaryColor="rgba(255, 255, 255, 0.2)"
-                      className="w-full h-full video-mobile-optimized live-locked-player live-only-controls"
-                      style={{
-                        borderRadius: isMobileView && orientation.isLandscape ? '0' : isMobileView ? '0' : '1rem',
-                        '--controls': isMobileView ? 'none' : 'auto',
-                        '--media-object-fit': (isMobileView && orientation.isLandscape) ? 'cover' : 'contain',
-                        '--seek-backward-button': 'none',
-                        '--seek-forward-button': 'none',
-                        '--time-range': 'none', // Always hide progress bar for live streams
-                        '--play-button': 'none', // Hide play/pause button - always live
-                        '--duration-display': 'none', // Hide duration/time display
-                        '--live-button': 'none', // Hide redundant "LIVE" button (we have our own indicator)
-                        width: '100%',
-                        height: '100%',
-                      } as React.CSSProperties}
-                      onPlay={() => console.log('🔴 LIVE: Stream started playing')}
-                      onPause={(e) => {
-                        // Prevent pausing on live streams - immediately resume
-                        console.log('⚠️ LIVE: Pause blocked - resuming playback');
-                        const player = muxPlayerRef.current;
-                        if (player?.media) {
-                          setTimeout(() => {
-                            player.media.play().catch(err => {
-                              console.log('Auto-resume failed (expected if user-initiated):', err);
-                            });
-                          }, 100);
-                        }
-                      }}
-                      onError={(error) => console.error('Stream error:', error)}
-                    />
+                    <div className="relative w-full h-full">
+                      {/* SimpleLivePlayer - Clean minimal controls */}
+                      <SimpleLivePlayer
+                        ref={muxPlayerRef}
+                        playbackId={streamData.mux_playback_id}
+                        streamId={streamData.id}
+                        streamTitle={streamData.events.title}
+                        isMuted={isMuted}
+                        onMuteToggle={toggleMute}
+                        networkQuality={networkQuality}
+                        isMobile={isMobileView}
+                        className="w-full h-full"
+                      />
+
+                      {/* Floating Reactions Overlay */}
+                      <div className="absolute inset-0 z-20 pointer-events-none">
+                        {floatingReactions.length > 0 && (
+                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                            {floatingReactions.map((reaction) => (
+                              <div
+                                key={reaction.id}
+                                className="absolute animate-heart-float"
+                                style={{
+                                  left: `${reaction.x}%`,
+                                  top: `${reaction.y}%`,
+                                  fontSize: isMobileView ? '2.5rem' : '3rem',
+                                  opacity: Math.max(0, 1 - (Date.now() - reaction.timestamp) / 10000),
+                                  animationDuration: '4s',
+                                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
+                                  zIndex: 30,
+                                }}
+                              >
+                                <div className="relative">
+                                  <div className="absolute inset-0 blur-sm opacity-50">{reaction.emoji}</div>
+                                  <div className="relative">{reaction.emoji}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Interactive Overlays from Studio */}
+                      {overlayState && (
+                        <div className="absolute inset-0 z-20 pointer-events-none">
+                          <OverlayRenderer
+                            overlayState={overlayState}
+                            viewerCount={viewerCount}
+                            streamId={streamId}
+                            connected={connected}
+                            reactions={[]}
+                          />
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
                       <div className="text-center">
@@ -878,69 +785,6 @@ export default function LiveViewerPage() {
                         <p className="text-white/70">Stream not available</p>
                       </div>
                     </div>
-                  )}
-
-                  {/* Floating Reactions */}
-                  <div className="absolute inset-0 z-20 pointer-events-none">
-                    {floatingReactions.length > 0 && (
-                      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        {floatingReactions.map((reaction) => (
-                          <div
-                            key={reaction.id}
-                            className="absolute animate-heart-float"
-                            style={{
-                              left: `${reaction.x}%`,
-                              top: `${reaction.y}%`,
-                              fontSize: isMobileView ? '2.5rem' : '3rem',
-                              opacity: Math.max(0, 1 - (Date.now() - reaction.timestamp) / 10000),
-                              animationDuration: '4s',
-                              filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))',
-                              zIndex: 30
-                            }}
-                          >
-                            <div className="relative">
-                              <div className="absolute inset-0 blur-sm opacity-50">{reaction.emoji}</div>
-                              <div className="relative">{reaction.emoji}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Interactive Overlays from Studio */}
-                  {overlayState && (
-                    <div className="absolute inset-0 z-20 pointer-events-none">
-                      <OverlayRenderer
-                        overlayState={overlayState}
-                        viewerCount={viewerCount}
-                        streamId={streamId}
-                        connected={connected}
-                        reactions={[]}
-                      />
-                    </div>
-                  )}
-
-                  {/* Mute Toggle - Always visible on mobile (both orientations) */}
-                  {isMobileView && (
-                    <MuteToggle
-                      isMuted={isMuted}
-                      onToggle={toggleMute}
-                      className="!bottom-20 !right-4"
-                    />
-                  )}
-
-                  {/* Mobile Controls Overlay - Only show in portrait, not landscape (already fullscreen) */}
-                  {isMobileView && !orientation.isLandscape && (
-                    <MobileControls
-                      isFullscreen={isFullscreen}
-                      isMuted={isMuted}
-                      onFullscreenToggle={toggleFullscreen}
-                      onMuteToggle={toggleMute}
-                      onChatToggle={() => setIsChatOpen(true)}
-                      networkQuality={networkQuality}
-                      className="absolute inset-0 z-30"
-                    />
                   )}
                 </div>
               </div>

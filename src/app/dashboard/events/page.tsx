@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AttendeeManagement } from '@/components/events/AttendeeManagement';
 import NotificationSettingsModal from '@/components/events/NotificationSettingsModal';
+import { createClient } from '@/lib/supabase/client';
 import {
   Plus,
   Calendar,
@@ -27,69 +28,22 @@ import {
 interface Event {
   id: string;
   title: string;
-  description: string;
-  date: string;
-  time: string;
-  duration: number;
-  status: 'draft' | 'scheduled' | 'live' | 'completed';
-  attendees: number;
-  maxAttendees: number;
-  tags: string[];
+  description: string | null;
+  scheduled_start: string;
+  scheduled_end: string;
+  status: 'draft' | 'scheduled' | 'live' | 'completed' | 'cancelled';
+  max_attendees: number | null;
+  timezone: string;
+  custom_fields: any | null;
+  registration_count?: number;
+  notifications_sent?: number;
 }
 
-const mockEvents: Event[] = [
-  {
-    id: '1',
-    title: 'How to 10x Your Webinar Conversions',
-    description: 'Complete ConvertCast Studio demo featuring all 6 AI-powered features',
-    date: '2024-10-25',
-    time: '14:00',
-    duration: 90,
-    status: 'scheduled',
-    attendees: 1247,
-    maxAttendees: 5000,
-    tags: ['Marketing', 'Demo', 'AI']
-  },
-  {
-    id: '2',
-    title: 'Advanced EngageMax™ Strategies',
-    description: 'Deep dive into real-time engagement optimization techniques',
-    date: '2024-10-20',
-    time: '16:00',
-    duration: 60,
-    status: 'live',
-    attendees: 892,
-    maxAttendees: 2000,
-    tags: ['Training', 'EngageMax']
-  },
-  {
-    id: '3',
-    title: 'Q4 Revenue Optimization Workshop',
-    description: 'Using AutoOffer™ and InsightEngine™ for maximum conversions',
-    date: '2024-10-18',
-    time: '15:00',
-    duration: 120,
-    status: 'completed',
-    attendees: 1456,
-    maxAttendees: 3000,
-    tags: ['Workshop', 'Revenue', 'Q4']
-  },
-  {
-    id: '4',
-    title: 'Product Launch: New AI Features',
-    description: 'Exclusive preview of upcoming ConvertCast AI capabilities',
-    date: '2024-11-05',
-    time: '13:00',
-    duration: 75,
-    status: 'draft',
-    attendees: 0,
-    maxAttendees: 10000,
-    tags: ['Product', 'Launch', 'AI']
-  }
-];
-
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const supabase = createClient();
+
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -98,6 +52,44 @@ export default function EventsPage() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedEventForNotifications, setSelectedEventForNotifications] = useState<string | null>(null);
   const [goingLive, setGoingLive] = useState<Record<string, boolean>>({});
+
+  // Create event form state
+  const [createFormData, setCreateFormData] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    duration: 60,
+    max_attendees: 1000,
+    tags: '',
+  });
+  const [creating, setCreating] = useState(false);
+
+  // Fetch events from API
+  useEffect(() => {
+    async function loadEvents() {
+      try {
+        setLoading(true);
+        console.log('📋 Fetching events from API...');
+
+        const response = await fetch('/api/events');
+        const data = await response.json();
+
+        if (data.success && data.events) {
+          console.log(`✅ Loaded ${data.events.length} events`);
+          setEvents(data.events);
+        } else {
+          console.error('❌ Failed to load events:', data.error);
+        }
+      } catch (error) {
+        console.error('❌ Error loading events:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadEvents();
+  }, []);
 
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
@@ -125,6 +117,67 @@ export default function EventsPage() {
     const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleCreateEvent = async () => {
+    try {
+      setCreating(true);
+
+      // Validate required fields
+      if (!createFormData.title || !createFormData.date || !createFormData.time) {
+        alert('Please fill in all required fields (Title, Date, Time)');
+        return;
+      }
+
+      console.log('📝 Creating event...');
+
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: createFormData.title,
+          description: createFormData.description,
+          date: createFormData.date,
+          time: createFormData.time,
+          duration: createFormData.duration,
+          max_attendees: createFormData.max_attendees,
+          tags: createFormData.tags ? createFormData.tags.split(',').map(t => t.trim()) : [],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create event');
+      }
+
+      console.log('✅ Event created:', data.event);
+
+      // Add new event to list
+      setEvents(prev => [data.event, ...prev]);
+
+      // Reset form and close modal
+      setCreateFormData({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        duration: 60,
+        max_attendees: 1000,
+        tags: '',
+      });
+      setShowCreateModal(false);
+
+      // Show success message
+      alert('Event created successfully!');
+    } catch (error) {
+      console.error('❌ Failed to create event:', error);
+      alert(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleGoLive = async (eventId: string) => {
     try {
@@ -198,9 +251,20 @@ export default function EventsPage() {
         </button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-12 shadow-2xl">
+            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-purple-300 text-center">Loading events...</p>
+          </div>
+        </div>
+      )}
+
       {/* Events Grid */}
-      <div className="grid gap-6">
-        {filteredEvents.map((event, index) => (
+      {!loading && (
+        <div className="grid gap-6">
+          {filteredEvents.map((event, index) => (
           <motion.div
             key={event.id}
             initial={{ opacity: 0, y: 20 }}
@@ -217,18 +281,22 @@ export default function EventsPage() {
                     {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                   </div>
                 </div>
-                <p className="text-purple-200/80 text-sm mb-4 leading-relaxed">{event.description}</p>
+                <p className="text-purple-200/80 text-sm mb-4 leading-relaxed">
+                  {event.description || 'No description provided'}
+                </p>
 
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {event.tags.map((tag, tagIndex) => (
-                    <span
-                      key={tagIndex}
-                      className="px-3 py-1 bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                {event.custom_fields?.tags && event.custom_fields.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {event.custom_fields.tags.map((tag: string, tagIndex: number) => (
+                      <span
+                        key={tagIndex}
+                        className="px-3 py-1 bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -254,21 +322,25 @@ export default function EventsPage() {
                   <span className="text-purple-300 text-sm">Date & Time</span>
                 </div>
                 <div className="text-white font-semibold">
-                  {new Date(event.date).toLocaleDateString()}
+                  {new Date(event.scheduled_start).toLocaleDateString()}
                 </div>
-                <div className="text-purple-200/80 text-sm">{event.time} ({event.duration}min)</div>
+                <div className="text-purple-200/80 text-sm">
+                  {new Date(event.scheduled_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {' - '}
+                  {new Date(event.scheduled_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
 
               <div className="bg-slate-900/50 border border-purple-500/20 rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-5 h-5 text-blue-400" />
-                  <span className="text-purple-300 text-sm">Attendees</span>
+                  <span className="text-purple-300 text-sm">Registrations</span>
                 </div>
                 <div className="text-white font-semibold">
-                  {(attendeeCount[event.id] || event.attendees).toLocaleString()}
+                  {(event.registration_count || 0).toLocaleString()}
                 </div>
                 <div className="text-purple-200/80 text-sm">
-                  Max: {event.maxAttendees.toLocaleString()}
+                  {event.max_attendees ? `Max: ${event.max_attendees.toLocaleString()}` : 'Unlimited'}
                 </div>
               </div>
 
@@ -278,12 +350,18 @@ export default function EventsPage() {
                   <span className="text-purple-300 text-sm">Capacity</span>
                 </div>
                 <div className="text-white font-semibold">
-                  {Math.round(((attendeeCount[event.id] || event.attendees) / event.maxAttendees) * 100)}%
+                  {event.max_attendees
+                    ? Math.round(((event.registration_count || 0) / event.max_attendees) * 100)
+                    : 0}%
                 </div>
                 <div className="w-full bg-slate-700/50 rounded-full h-2 mt-2">
                   <div
                     className="bg-gradient-to-r from-green-400 to-green-500 h-2 rounded-full"
-                    style={{ width: `${((attendeeCount[event.id] || event.attendees) / event.maxAttendees) * 100}%` }}
+                    style={{
+                      width: event.max_attendees
+                        ? `${Math.min(((event.registration_count || 0) / event.max_attendees) * 100, 100)}%`
+                        : '0%'
+                    }}
                   />
                 </div>
               </div>
@@ -419,7 +497,7 @@ export default function EventsPage() {
                   <AttendeeManagement
                     eventId={event.id}
                     eventTitle={event.title}
-                    eventDate={new Date(event.date + 'T' + event.time)}
+                    eventDate={new Date(event.scheduled_start)}
                     onAttendeeCountChange={(count) =>
                       setAttendeeCount(prev => ({ ...prev, [event.id]: count }))
                     }
@@ -428,10 +506,11 @@ export default function EventsPage() {
               )}
             </AnimatePresence>
           </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {filteredEvents.length === 0 && (
+      {!loading && filteredEvents.length === 0 && (
         <div className="text-center py-16">
           <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-12 shadow-2xl max-w-md mx-auto">
             <Calendar className="w-16 h-16 text-purple-400 mx-auto mb-4" />
@@ -475,9 +554,11 @@ export default function EventsPage() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-purple-300 mb-2">Event Title</label>
+                <label className="block text-sm font-medium text-purple-300 mb-2">Event Title *</label>
                 <input
                   type="text"
+                  value={createFormData.title}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   placeholder="Enter event title..."
                 />
@@ -487,6 +568,8 @@ export default function EventsPage() {
                 <label className="block text-sm font-medium text-purple-300 mb-2">Description</label>
                 <textarea
                   rows={3}
+                  value={createFormData.description}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   placeholder="Describe your event..."
                 />
@@ -494,16 +577,20 @@ export default function EventsPage() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-purple-300 mb-2">Date</label>
+                  <label className="block text-sm font-medium text-purple-300 mb-2">Date *</label>
                   <input
                     type="date"
+                    value={createFormData.date}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, date: e.target.value }))}
                     className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-purple-300 mb-2">Time</label>
+                  <label className="block text-sm font-medium text-purple-300 mb-2">Time *</label>
                   <input
                     type="time"
+                    value={createFormData.time}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, time: e.target.value }))}
                     className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
@@ -516,7 +603,8 @@ export default function EventsPage() {
                     type="number"
                     min="15"
                     max="480"
-                    defaultValue="60"
+                    value={createFormData.duration}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
                     className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
@@ -525,7 +613,8 @@ export default function EventsPage() {
                   <input
                     type="number"
                     min="1"
-                    defaultValue="1000"
+                    value={createFormData.max_attendees}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, max_attendees: parseInt(e.target.value) }))}
                     className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
@@ -535,6 +624,8 @@ export default function EventsPage() {
                 <label className="block text-sm font-medium text-purple-300 mb-2">Tags</label>
                 <input
                   type="text"
+                  value={createFormData.tags}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, tags: e.target.value }))}
                   className="w-full px-4 py-3 bg-slate-800/60 border border-purple-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   placeholder="Enter tags separated by commas..."
                 />
@@ -543,16 +634,37 @@ export default function EventsPage() {
 
             <div className="flex gap-4 mt-8 pt-6 border-t border-purple-500/20">
               <button
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/20 px-6 py-3 rounded-xl font-semibold transition-all duration-200"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  // Reset form when closing
+                  setCreateFormData({
+                    title: '',
+                    description: '',
+                    date: '',
+                    time: '',
+                    duration: 60,
+                    max_attendees: 1000,
+                    tags: '',
+                  });
+                }}
+                disabled={creating}
+                className="flex-1 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/20 px-6 py-3 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/30 transition-all duration-200"
+                onClick={handleCreateEvent}
+                disabled={creating}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Create Event
+                {creating ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Event'
+                )}
               </button>
             </div>
           </motion.div>

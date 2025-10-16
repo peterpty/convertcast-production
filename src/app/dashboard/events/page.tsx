@@ -97,6 +97,7 @@ export default function EventsPage() {
   const [attendeeCount, setAttendeeCount] = useState<Record<string, number>>({});
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedEventForNotifications, setSelectedEventForNotifications] = useState<string | null>(null);
+  const [goingLive, setGoingLive] = useState<Record<string, boolean>>({});
 
   const getStatusColor = (status: Event['status']) => {
     switch (status) {
@@ -124,6 +125,34 @@ export default function EventsPage() {
     const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleGoLive = async (eventId: string) => {
+    try {
+      setGoingLive(prev => ({ ...prev, [eventId]: true }));
+
+      const response = await fetch(`/api/events/${eventId}/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to start event');
+      }
+
+      console.log('✅ Event started:', data);
+
+      // Navigate to studio with event context
+      window.location.href = `/dashboard/stream/studio?eventId=${eventId}&streamId=${data.stream.id}`;
+    } catch (error) {
+      console.error('❌ Failed to go live:', error);
+      alert(`Failed to go live: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setGoingLive(prev => ({ ...prev, [eventId]: false }));
+    }
+  };
 
   return (
     <DashboardLayout
@@ -287,11 +316,21 @@ export default function EventsPage() {
               {event.status === 'scheduled' && (
                 <>
                   <button
-                    onClick={() => window.location.href = '/dashboard/stream/studio'}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                    onClick={() => handleGoLive(event.id)}
+                    disabled={goingLive[event.id]}
+                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Play className="w-5 h-5" />
-                    Go Live
+                    {goingLive[event.id] ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-5 h-5" />
+                        Go Live
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => setSelectedEventForManagement(
@@ -313,11 +352,21 @@ export default function EventsPage() {
               {event.status === 'live' && (
                 <>
                   <button
-                    onClick={() => window.location.href = '/dashboard/stream/studio'}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                    onClick={() => handleGoLive(event.id)}
+                    disabled={goingLive[event.id]}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Settings className="w-5 h-5" />
-                    Manage Live
+                    {goingLive[event.id] ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="w-5 h-5" />
+                        Manage Live
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => window.open(`/watch/${event.id}`, '_blank')}

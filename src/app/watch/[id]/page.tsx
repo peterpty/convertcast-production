@@ -396,25 +396,58 @@ export default function LiveViewerPage() {
 
         console.log('🔍 Viewer: Looking up stream:', streamId);
 
-        const muxResult = await supabase
-          .from('streams')
-          .select(`
-            *,
-            events (
-              id,
-              title,
-              description,
-              scheduled_start,
-              scheduled_end,
-              status,
-              user_id
-            )
-          `)
-          .eq('mux_playback_id', streamId)
-          .single();
+        // Check if streamId is a UUID (eventId) or mux_playback_id
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const isEventId = uuidRegex.test(streamId);
 
-        let stream = muxResult.data;
-        let streamError = muxResult.error;
+        let stream: any = null;
+        let streamError: any = null;
+
+        if (isEventId) {
+          // streamId is an eventId - query by event_id
+          console.log('🎯 streamId is an event UUID, querying by event_id');
+          const eventResult = await supabase
+            .from('streams')
+            .select(`
+              *,
+              events (
+                id,
+                title,
+                description,
+                scheduled_start,
+                scheduled_end,
+                status,
+                user_id
+              )
+            `)
+            .eq('event_id', streamId)
+            .single();
+
+          stream = eventResult.data;
+          streamError = eventResult.error;
+        } else {
+          // streamId is a mux_playback_id - query by mux_playback_id
+          console.log('🎬 streamId is a mux_playback_id, querying by mux_playback_id');
+          const muxResult = await supabase
+            .from('streams')
+            .select(`
+              *,
+              events (
+                id,
+                title,
+                description,
+                scheduled_start,
+                scheduled_end,
+                status,
+                user_id
+              )
+            `)
+            .eq('mux_playback_id', streamId)
+            .single();
+
+          stream = muxResult.data;
+          streamError = muxResult.error;
+        }
 
         // CRITICAL: Never use fallback with playback ID as database ID
         // If stream doesn't exist in database, we MUST show error
@@ -629,6 +662,51 @@ export default function LiveViewerPage() {
   // Network quality (mock for now, can be enhanced with real metrics)
   const networkQuality: 'excellent' | 'good' | 'fair' | 'poor' | 'offline' = connected ? 'good' : 'offline';
 
+  // Pre-event countdown state
+  const [timeUntilStart, setTimeUntilStart] = useState<string | null>(null);
+  const [eventIsLive, setEventIsLive] = useState(false);
+
+  // Check if event is live or upcoming
+  useEffect(() => {
+    if (!streamData?.events) return;
+
+    const checkEventStatus = () => {
+      const now = new Date().getTime();
+      const scheduledStart = new Date(streamData.events.scheduled_start).getTime();
+      const timeDiff = scheduledStart - now;
+
+      // Event is live if status is 'live' or if we're past scheduled start
+      if (streamData.events.status === 'live' || timeDiff <= 0) {
+        setEventIsLive(true);
+        setTimeUntilStart(null);
+      } else {
+        // Event is upcoming - calculate countdown
+        setEventIsLive(false);
+
+        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+        let countdown = '';
+        if (days > 0) countdown += `${days}d `;
+        if (hours > 0 || days > 0) countdown += `${hours}h `;
+        if (minutes > 0 || hours > 0 || days > 0) countdown += `${minutes}m `;
+        countdown += `${seconds}s`;
+
+        setTimeUntilStart(countdown);
+      }
+    };
+
+    // Check immediately
+    checkEventStatus();
+
+    // Update every second
+    const interval = setInterval(checkEventStatus, 1000);
+
+    return () => clearInterval(interval);
+  }, [streamData?.events]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center">
@@ -722,7 +800,47 @@ export default function LiveViewerPage() {
                       : 'aspect-video'
                   }`}
                 >
-                  {streamData.mux_playback_id ? (
+                  {!eventIsLive && timeUntilStart ? (
+                    /* Pre-Event Countdown Screen */
+                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                      <div className="text-center px-6">
+                        <div className="mb-8">
+                          <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                            <Play className="w-10 h-10 text-white" />
+                          </div>
+                          <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-2">
+                            {streamData.events.title}
+                          </h2>
+                          {streamData.events.description && (
+                            <p className="text-purple-200/80 mb-6 max-w-md mx-auto">
+                              {streamData.events.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 backdrop-blur-xl border border-purple-500/30 rounded-3xl p-8 inline-block">
+                          <p className="text-purple-300 text-sm uppercase tracking-wider mb-4">Starting in</p>
+                          <div className="text-6xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent font-mono">
+                            {timeUntilStart}
+                          </div>
+                          <p className="text-purple-200/80 text-sm mt-4">
+                            {new Date(streamData.events.scheduled_start).toLocaleString('en-US', {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              timeZoneName: 'short'
+                            })}
+                          </p>
+                        </div>
+
+                        <p className="text-purple-200/60 text-sm mt-6">
+                          💡 The stream will start automatically when it begins
+                        </p>
+                      </div>
+                    </div>
+                  ) : streamData.mux_playback_id ? (
                     <div className="relative w-full h-full overflow-hidden">
                       {/* SimpleLivePlayer - Clean minimal controls */}
                       <SimpleLivePlayer

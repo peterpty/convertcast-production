@@ -248,7 +248,15 @@ export default function StreamStudioPage() {
     }
 
   useEffect(() => {
-    loadActiveStream();
+    // Check for eventId and streamId query params
+    const searchParams = new URLSearchParams(window.location.search);
+    const streamId = searchParams.get('streamId');
+    const eventId = searchParams.get('eventId');
+
+    console.log('🎬 Studio page loaded with params:', { eventId, streamId });
+
+    // Load stream by ID if provided, otherwise load latest
+    loadActiveStream(streamId || undefined);
   }, []);
 
   if (loading) {
@@ -300,10 +308,13 @@ export default function StreamStudioPage() {
   }
 
   // NO WIZARD - Always show studio (stream is created immediately on page load)
+  const eventTitle = activeStream?.events?.title;
+  const eventDescription = activeStream?.events?.description;
+
   return (
     <DashboardLayout
-      title="Streaming Studio"
-      description="AI-powered live streaming controls"
+      title={eventTitle || "Streaming Studio"}
+      description={eventDescription || "AI-powered live streaming controls"}
     >
       <div className="h-[calc(100vh-120px)] min-h-[1500px] overflow-hidden">
         <StudioDashboard stream={activeStream} />

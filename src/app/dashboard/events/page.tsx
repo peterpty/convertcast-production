@@ -110,7 +110,7 @@ export default function EventsPage() {
 
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (event.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -173,6 +173,38 @@ export default function EventsPage() {
       alert(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleScheduleEvent = async (eventId: string) => {
+    try {
+      console.log('📅 Scheduling event:', eventId);
+
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'scheduled' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to schedule event');
+      }
+
+      console.log('✅ Event scheduled:', data.event);
+
+      // Update local state to reflect status change
+      setEvents(prev => prev.map(e =>
+        e.id === eventId ? { ...e, status: 'scheduled' } : e
+      ));
+
+      alert('Event scheduled successfully! You can now go live or add registrants.');
+    } catch (error) {
+      console.error('❌ Failed to schedule event:', error);
+      alert(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -376,14 +408,25 @@ export default function EventsPage() {
             <div className="flex gap-4">
               {event.status === 'draft' && (
                 <>
-                  <button className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200">
+                  <button
+                    onClick={() => handleScheduleEvent(event.id)}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-200"
+                  >
                     Schedule Event
                   </button>
                   <button
-                    onClick={() => window.open(`/join/${event.id}`, '_blank')}
-                    className="bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 px-4 py-3 rounded-xl font-semibold transition-all duration-200"
+                    onClick={() => setSelectedEventForManagement(
+                      selectedEventForManagement === event.id ? null : event.id
+                    )}
+                    className="bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2"
                   >
-                    Preview
+                    <Users className="w-4 h-4" />
+                    Attendees
+                    {selectedEventForManagement === event.id ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
                   </button>
                 </>
               )}

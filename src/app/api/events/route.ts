@@ -99,32 +99,53 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch analytics for each event
+    // Fetch analytics for each event (with error handling to prevent 500 crashes)
     const eventsWithAnalytics = await Promise.all(
       (events || []).map(async (event) => {
-        const { count: registrationCount } = await supabase
-          .from('registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_id', event.id);
+        let registrationCount = 0;
+        let notificationCount = 0;
+        let analytics = null;
 
-        const { count: notificationCount } = await supabase
-          .from('event_notifications')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_id', event.id)
-          .eq('status', 'sent');
+        // Try to fetch registration count
+        try {
+          const { count } = await supabase
+            .from('registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id);
+          registrationCount = count || 0;
+        } catch (error) {
+          console.error(`Failed to fetch registration count for event ${event.id}:`, error);
+        }
 
-        // Fetch event analytics if exists
-        const { data: analytics } = await supabase
-          .from('event_analytics')
-          .select('*')
-          .eq('event_id', event.id)
-          .single();
+        // Try to fetch notification count
+        try {
+          const { count } = await supabase
+            .from('event_notifications')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id)
+            .eq('status', 'sent');
+          notificationCount = count || 0;
+        } catch (error) {
+          console.error(`Failed to fetch notification count for event ${event.id}:`, error);
+        }
+
+        // Try to fetch event analytics (use maybeSingle to handle missing rows gracefully)
+        try {
+          const { data } = await supabase
+            .from('event_analytics')
+            .select('*')
+            .eq('event_id', event.id)
+            .maybeSingle(); // Returns null if no row exists, doesn't throw error
+          analytics = data;
+        } catch (error) {
+          console.error(`Failed to fetch analytics for event ${event.id}:`, error);
+        }
 
         return {
           ...event,
-          registration_count: registrationCount || 0,
-          notifications_sent: notificationCount || 0,
-          analytics: analytics || null,
+          registration_count: registrationCount,
+          notifications_sent: notificationCount,
+          analytics: analytics,
         };
       })
     );

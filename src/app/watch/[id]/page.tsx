@@ -71,25 +71,39 @@ export default function LiveViewerPage() {
   const [orientation, setOrientation] = useState({ isLandscape: false, isPortrait: true, type: 'portrait' as const, angle: 0 });
   const keyboardState = { isOpen: false, height: 0 };
 
-  // Detect mobile on mount
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobile = window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      setIsMobileDevice(isMobile);
+  // Viewer profile state - for persistent identity across sessions (MUST BE DECLARED BEFORE useEffect)
+  const [viewerProfileId, setViewerProfileId] = useState<string | null>(null);
+  const [viewerDisplayName, setViewerDisplayName] = useState<string>(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
 
-      const isLandscape = window.innerWidth > window.innerHeight;
-      setOrientation({
-        isLandscape,
-        isPortrait: !isLandscape,
-        type: isLandscape ? 'landscape' : 'portrait',
-        angle: 0
-      });
-    };
+  // Legacy viewerId for backward compatibility with WebSocket
+  const viewerId = viewerDisplayName;
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const [streamData, setStreamData] = useState<StreamWithEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessageWithProfile[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isPrivateMessage, setIsPrivateMessage] = useState(false);
+  const [reactions, setReactions] = useState<{ [key: string]: number }>({
+    heart: 0,
+    laugh: 0,
+    wow: 0,
+    sad: 0,
+    clap: 0,
+    fire: 0,
+    hundred: 0,
+    rocket: 0
+  });
+  const [viewerCount, setViewerCount] = useState(0);
+  const [overlayData, setOverlayData] = useState<any>(null);
+  const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
+
+  // Mobile-specific state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start muted (matches autoPlay="muted" for browser policy)
+
+  // Use robust mobile detection that survives rotation
+  const isMobileView = isMobileDevice;
 
   // Load viewer profile from registration token or localStorage
   useEffect(() => {
@@ -160,40 +174,6 @@ export default function LiveViewerPage() {
 
     loadViewerProfile();
   }, []);
-
-  // Viewer profile state - for persistent identity across sessions
-  const [viewerProfileId, setViewerProfileId] = useState<string | null>(null);
-  const [viewerDisplayName, setViewerDisplayName] = useState<string>(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
-
-  // Legacy viewerId for backward compatibility with WebSocket
-  const viewerId = viewerDisplayName;
-
-  const [streamData, setStreamData] = useState<StreamWithEvent | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessageWithProfile[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isPrivateMessage, setIsPrivateMessage] = useState(false);
-  const [reactions, setReactions] = useState<{ [key: string]: number }>({
-    heart: 0,
-    laugh: 0,
-    wow: 0,
-    sad: 0,
-    clap: 0,
-    fire: 0,
-    hundred: 0,
-    rocket: 0
-  });
-  const [viewerCount, setViewerCount] = useState(0);
-  const [overlayData, setOverlayData] = useState<any>(null);
-  const [floatingReactions, setFloatingReactions] = useState<Array<{ id: string; emoji: string; x: number; y: number; timestamp: number }>>([]);
-
-  // Mobile-specific state
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(true); // Start muted (matches autoPlay="muted" for browser policy)
-
-  // Use robust mobile detection that survives rotation
-  const isMobileView = isMobileDevice;
 
   // Lock body scroll on mobile landscape for immersive experience
   useEffect(() => {
@@ -535,8 +515,7 @@ export default function LiveViewerPage() {
           return;
         }
 
-        // Validate we have a proper database UUID
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        // Validate we have a proper database UUID (reuse regex from above)
         if (!uuidRegex.test(stream.id)) {
           console.error('❌ Viewer: Stream has invalid database UUID', {
             stream_id: stream.id,

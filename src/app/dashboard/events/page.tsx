@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AttendeeManagement } from '@/components/events/AttendeeManagement';
 import NotificationSettingsModal from '@/components/events/NotificationSettingsModal';
-import { createClient } from '@/lib/supabase/client';
 import {
   Plus,
   Calendar,
@@ -40,8 +39,6 @@ interface Event {
 }
 
 export default function EventsPage() {
-  const supabase = createClient();
-
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);

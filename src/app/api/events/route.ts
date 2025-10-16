@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
           id,
           status,
           mux_playback_id,
-          viewer_count,
+          total_viewers,
           peak_viewers
         )
       `, { count: 'exact' })

@@ -50,6 +50,10 @@ export default function EventsPage() {
   const [selectedEventForNotifications, setSelectedEventForNotifications] = useState<string | null>(null);
   const [goingLive, setGoingLive] = useState<Record<string, boolean>>({});
 
+  // View/Edit event state
+  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+
   // Create event form state
   const [createFormData, setCreateFormData] = useState({
     title: '',
@@ -236,6 +240,54 @@ export default function EventsPage() {
     }
   };
 
+  const handleViewEvent = (event: Event) => {
+    setViewingEvent(event);
+  };
+
+  const handleEditEvent = (event: Event) => {
+    setEditingEvent(event);
+  };
+
+  const handleCopyWatchUrl = (eventId: string) => {
+    const baseUrl = window.location.origin;
+    const watchUrl = `${baseUrl}/watch/${eventId}`;
+    navigator.clipboard.writeText(watchUrl);
+    alert('Watch URL copied to clipboard!');
+  };
+
+  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${eventTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Deleting event:', eventId);
+
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete event');
+      }
+
+      console.log('✅ Event deleted');
+
+      // Remove event from local state
+      setEvents(prev => prev.filter(e => e.id !== eventId));
+
+      alert('Event deleted successfully');
+    } catch (error) {
+      console.error('❌ Failed to delete event:', error);
+      alert(`Failed to delete event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   return (
     <DashboardLayout
       title="Events"
@@ -329,16 +381,32 @@ export default function EventsPage() {
               </div>
 
               <div className="flex gap-2">
-                <button className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 rounded-xl transition-all duration-200">
+                <button
+                  onClick={() => handleViewEvent(event)}
+                  title="View details"
+                  className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 rounded-xl transition-all duration-200"
+                >
                   <Eye className="w-5 h-5" />
                 </button>
-                <button className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 rounded-xl transition-all duration-200">
+                <button
+                  onClick={() => handleEditEvent(event)}
+                  title="Edit event"
+                  className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 rounded-xl transition-all duration-200"
+                >
                   <Edit className="w-5 h-5" />
                 </button>
-                <button className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 rounded-xl transition-all duration-200">
+                <button
+                  onClick={() => handleCopyWatchUrl(event.id)}
+                  title="Copy watch URL"
+                  className="p-2 bg-purple-600/20 border border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 rounded-xl transition-all duration-200"
+                >
                   <Copy className="w-5 h-5" />
                 </button>
-                <button className="p-2 bg-red-600/20 border border-red-500/30 text-red-200 hover:text-white hover:bg-red-600/30 rounded-xl transition-all duration-200">
+                <button
+                  onClick={() => handleDeleteEvent(event.id, event.title)}
+                  title="Delete event"
+                  className="p-2 bg-red-600/20 border border-red-500/30 text-red-200 hover:text-white hover:bg-red-600/30 rounded-xl transition-all duration-200"
+                >
                   <Trash2 className="w-5 h-5" />
                 </button>
               </div>

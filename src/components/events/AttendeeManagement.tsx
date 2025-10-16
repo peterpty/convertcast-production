@@ -68,6 +68,10 @@ export function AttendeeManagement({
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
 
+  // Quick email add state
+  const [quickEmail, setQuickEmail] = useState('');
+  const [addingEmail, setAddingEmail] = useState(false);
+
   useEffect(() => {
     loadAttendeeData();
     loadCampaigns();
@@ -202,6 +206,59 @@ export function AttendeeManagement({
     }
   };
 
+  const handleQuickAddEmail = async () => {
+    try {
+      setAddingEmail(true);
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(quickEmail)) {
+        alert('Please enter a valid email address');
+        return;
+      }
+
+      // Auto-generate first and last name from email
+      const emailParts = quickEmail.split('@')[0].split(/[._-]/);
+      const firstName = emailParts[0]?.charAt(0).toUpperCase() + emailParts[0]?.slice(1) || 'Guest';
+      const lastName = emailParts[1]?.charAt(0).toUpperCase() + emailParts[1]?.slice(1) || 'User';
+
+      console.log('Adding attendee with email:', quickEmail);
+
+      const response = await fetch(`/api/events/${eventId}/registrations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          email: quickEmail,
+          source: 'manual',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to add attendee');
+      }
+
+      console.log('✅ Attendee added:', data.registration);
+
+      // Clear input and reload attendee data
+      setQuickEmail('');
+      alert(`Successfully added ${quickEmail} to the event!`);
+
+      // TODO: Reload real attendee data from API
+      // For now, this adds to mock data
+    } catch (error) {
+      console.error('❌ Failed to add attendee:', error);
+      alert(`Failed to add attendee: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setAddingEmail(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-8">
@@ -257,6 +314,46 @@ export function AttendeeManagement({
             );
           })}
         </div>
+      </div>
+
+      {/* Quick Add Attendee Form */}
+      <div className="px-6 py-4 bg-gradient-to-r from-purple-600/10 to-indigo-600/10 border-b border-gray-700">
+        <div className="flex items-center gap-3">
+          <Mail className="w-5 h-5 text-purple-400 flex-shrink-0" />
+          <input
+            type="email"
+            placeholder="Add attendee by email (e.g., john.doe@example.com)"
+            value={quickEmail}
+            onChange={(e) => setQuickEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !addingEmail) {
+                handleQuickAddEmail();
+              }
+            }}
+            disabled={addingEmail}
+            className="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <button
+            onClick={handleQuickAddEmail}
+            disabled={addingEmail || !quickEmail}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {addingEmail ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <Users className="w-4 h-4" />
+                Add Attendee
+              </>
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 mt-2 ml-8">
+          Names will be auto-generated from the email address. You can edit them later if needed.
+        </p>
       </div>
 
       {/* Content */}

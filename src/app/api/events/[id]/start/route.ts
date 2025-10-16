@@ -129,7 +129,6 @@ export async function POST(
         mux_stream_id: muxData.stream.id,
         mux_playback_id: muxData.stream.playback_id,
         stream_key: muxData.stream.stream_key,
-        rtmp_server_url: muxData.stream.rtmp_server_url,
         status: 'active',
         engagemax_config: {
           polls_enabled: true,
@@ -141,11 +140,6 @@ export async function POST(
           experiments_enabled: true,
           dynamic_pricing: true,
           behavioral_triggers: true,
-        },
-        chat_config: {
-          enabled: true,
-          moderated: false,
-          ai_responses: true,
         },
       })
       .select()

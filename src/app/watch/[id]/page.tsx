@@ -91,8 +91,82 @@ export default function LiveViewerPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Generate a unique viewer ID for this session
-  const [viewerId] = useState(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
+  // Load viewer profile from registration token or localStorage
+  useEffect(() => {
+    async function loadViewerProfile() {
+      try {
+        // Check for token parameter in URL (from registration email/SMS link)
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (token) {
+          console.log('🔑 Found registration token, looking up viewer profile...');
+
+          // Query registrations table to get viewer_profile_id
+          const { data: registration, error } = await supabase
+            .from('registrations')
+            .select(`
+              id,
+              viewer_profile_id,
+              viewer_profiles (
+                id,
+                first_name,
+                last_name,
+                email
+              )
+            `)
+            .eq('access_token', token)
+            .single();
+
+          if (error || !registration) {
+            console.warn('⚠️ Registration token not found or invalid:', error);
+            // Fall back to anonymous
+            return;
+          }
+
+          const profile = registration.viewer_profiles;
+          if (profile) {
+            const displayName = `${profile.first_name} ${profile.last_name}`;
+            setViewerProfileId(profile.id);
+            setViewerDisplayName(displayName);
+
+            // Store in localStorage for persistence
+            localStorage.setItem('cc_viewer_profile_id', profile.id);
+            localStorage.setItem('cc_viewer_display_name', displayName);
+
+            console.log('✅ Viewer profile loaded:', {
+              id: profile.id,
+              name: displayName,
+            });
+          }
+        } else {
+          // No token - check localStorage for previously saved profile
+          const storedProfileId = localStorage.getItem('cc_viewer_profile_id');
+          const storedDisplayName = localStorage.getItem('cc_viewer_display_name');
+
+          if (storedProfileId && storedDisplayName) {
+            console.log('📦 Restored viewer profile from localStorage:', storedDisplayName);
+            setViewerProfileId(storedProfileId);
+            setViewerDisplayName(storedDisplayName);
+          } else {
+            console.log('👤 Anonymous viewer (no token or stored profile)');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading viewer profile:', error);
+        // Continue with anonymous viewer on error
+      }
+    }
+
+    loadViewerProfile();
+  }, []);
+
+  // Viewer profile state - for persistent identity across sessions
+  const [viewerProfileId, setViewerProfileId] = useState<string | null>(null);
+  const [viewerDisplayName, setViewerDisplayName] = useState<string>(`Viewer ${Math.floor(Math.random() * 9000) + 1000}`);
+
+  // Legacy viewerId for backward compatibility with WebSocket
+  const viewerId = viewerDisplayName;
 
   const [streamData, setStreamData] = useState<StreamWithEvent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -593,12 +667,12 @@ export default function LiveViewerPage() {
       const result = await ChatService.saveMessage(
         streamData.id, // ← FIXED: Use database UUID, not Mux playback ID
         message.trim(),
-        viewerId, // username
-        null, // viewer_profile_id
+        viewerDisplayName, // username (for display)
+        viewerProfileId, // ✅ NEW: Use viewer_profile_id from registration or localStorage
         false, // is_synthetic
         null, // intent_signals
         isPrivate, // is_private flag
-        viewerId, // sender_id
+        viewerId, // sender_id (legacy, for filtering)
         null, // reply_to_user_id
         null // reply_to_message_id
       );
@@ -619,7 +693,7 @@ export default function LiveViewerPage() {
     }
 
     // ✅ NO WebSocket broadcast - Supabase Realtime handles it with proper filtering
-  }, [viewerId, streamData?.id]); // Changed dependency to primitive
+  }, [viewerId, viewerProfileId, viewerDisplayName, streamData?.id]); // Updated with viewer profile dependencies
 
   const handleInstagramReaction = useCallback(() => {
     handleReaction('heart');

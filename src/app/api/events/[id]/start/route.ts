@@ -181,8 +181,139 @@ export async function POST(
 
     console.log('✅ Event started successfully');
 
-    // IMPORTANT: Do NOT send notifications here!
-    // Notifications are already scheduled and sent automatically by cron job
+    // Send NOW LIVE notifications to all registrants
+    try {
+      console.log('📧 Sending NOW LIVE notifications to registrants...');
+
+      // Query all registrations for this event with viewer profiles
+      const { data: registrations, error: regError } = await supabase
+        .from('registrations')
+        .select(`
+          id,
+          viewer_profile_id,
+          viewer_profiles (
+            id,
+            email,
+            phone,
+            first_name,
+            last_name
+          )
+        `)
+        .eq('event_id', eventId);
+
+      if (regError) {
+        console.error('❌ Error querying registrations:', regError);
+      } else if (registrations && registrations.length > 0) {
+        console.log(`📋 Found ${registrations.length} registrants to notify`);
+
+        // Import notification functions
+        const {
+          sendBatchEmails,
+          sendBatchSms,
+          generateNowLiveEmailHtml,
+          generateNowLiveSms,
+          isValidEmail,
+          isValidPhone,
+          formatPhoneNumber,
+        } = await import('@/lib/notifications/notificationService');
+
+        // Get user's name for email
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+
+        const streamerName = userData?.name || 'Your host';
+
+        // Build viewer URL (use eventId so countdown works)
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3009';
+        const viewerUrl = `${baseUrl}/watch/${eventId}`;
+
+        // Prepare email list
+        const emails = registrations
+          .filter(reg => reg.viewer_profiles && isValidEmail(reg.viewer_profiles.email))
+          .map(reg => {
+            const profile = reg.viewer_profiles;
+            return {
+              to: profile.email,
+              subject: `🔴 LIVE NOW: ${event.title}`,
+              html: generateNowLiveEmailHtml({
+                eventTitle: event.title,
+                streamUrl: viewerUrl,
+                streamerName,
+                firstName: profile.first_name,
+              }),
+              tags: ['now-live', 'event-notification'],
+              trackOpens: true,
+              trackClicks: true,
+            };
+          });
+
+        // Prepare SMS list
+        const smsMessages = registrations
+          .filter(reg => reg.viewer_profiles && isValidPhone(reg.viewer_profiles.phone))
+          .map(reg => {
+            const profile = reg.viewer_profiles;
+            return {
+              to: formatPhoneNumber(profile.phone),
+              body: generateNowLiveSms({
+                eventTitle: event.title,
+                streamUrl: viewerUrl,
+              }),
+            };
+          });
+
+        console.log(`📧 Sending ${emails.length} emails and ${smsMessages.length} SMS messages...`);
+
+        // Send notifications in parallel
+        const [emailResults, smsResults] = await Promise.all([
+          emails.length > 0 ? sendBatchEmails(emails, 100, 1000) : Promise.resolve([]),
+          smsMessages.length > 0 ? sendBatchSms(smsMessages, 50, 1000) : Promise.resolve([]),
+        ]);
+
+        // Count successes and failures
+        const emailSuccess = emailResults.filter(r => r.success).length;
+        const emailFailed = emailResults.filter(r => !r.success).length;
+        const smsSuccess = smsResults.filter(r => r.success).length;
+        const smsFailed = smsResults.filter(r => !r.success).length;
+
+        console.log('✅ Notification results:', {
+          emails: { sent: emailSuccess, failed: emailFailed },
+          sms: { sent: smsSuccess, failed: smsFailed },
+        });
+
+        // Update analytics with notification counts
+        await supabase
+          .from('event_analytics')
+          .update({
+            notifications_sent: (emailSuccess + smsSuccess),
+          })
+          .eq('event_id', eventId);
+
+        // Create notification record
+        await supabase
+          .from('event_notifications')
+          .insert({
+            event_id: eventId,
+            notification_type: 'now_live',
+            notification_timing: 'immediate',
+            template_name: 'now_live',
+            scheduled_time: new Date().toISOString(),
+            recipients_count: registrations.length,
+            sent_count: emailSuccess + smsSuccess,
+            failed_count: emailFailed + smsFailed,
+            status: 'sent',
+          });
+
+        console.log(`✅ NOW LIVE notifications sent: ${emailSuccess + smsSuccess}/${registrations.length}`);
+      } else {
+        console.log('ℹ️ No registrants found for this event');
+      }
+    } catch (notificationError) {
+      console.error('❌ Error sending NOW LIVE notifications:', notificationError);
+      // Don't fail the API call if notifications fail - event is still live
+    }
 
     return NextResponse.json(
       {

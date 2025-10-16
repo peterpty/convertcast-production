@@ -355,6 +355,169 @@ export function generateEventSms(params: {
 }
 
 /**
+ * Generate NOW LIVE email HTML (when event starts)
+ */
+export function generateNowLiveEmailHtml(params: {
+  eventTitle: string;
+  streamUrl: string;
+  streamerName: string;
+  firstName?: string;
+  customMessage?: string;
+  logoUrl?: string;
+}): string {
+  const greeting = params.firstName ? `Hi ${params.firstName},` : 'Hi there,';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+      border-radius: 8px 8px 0 0;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .live-badge {
+      display: inline-block;
+      background: white;
+      color: #ef4444;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 10px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    .content {
+      background: #f8f9fa;
+      padding: 30px 20px;
+    }
+    .event-card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #ef4444;
+    }
+    .event-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ef4444;
+      margin-bottom: 16px;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      padding: 18px 40px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+      margin: 20px 0;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    .cta-button:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+    .urgency-message {
+      background: #fef2f2;
+      border: 2px solid #ef4444;
+      color: #991b1b;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-weight: 600;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🎬 ConvertCast</div>
+    <div class="live-badge">🔴 LIVE NOW</div>
+    <p style="font-size: 20px; margin-top: 16px;">Your event is starting right now!</p>
+  </div>
+
+  <div class="content">
+    <p>${greeting}</p>
+
+    <div class="urgency-message">
+      ⚡ The live stream has started! Join now to catch everything from the beginning.
+    </div>
+
+    ${params.customMessage ? `<p>${params.customMessage}</p>` : ''}
+
+    <div class="event-card">
+      <div class="event-title">${params.eventTitle}</div>
+
+      <p style="font-size: 16px; color: #666; margin-bottom: 20px;">
+        <strong>🎤 Host:</strong> ${params.streamerName}
+      </p>
+
+      <center>
+        <a href="${params.streamUrl}" class="cta-button">
+          🔴 JOIN LIVE STREAM NOW →
+        </a>
+      </center>
+    </div>
+
+    <p>
+      Don't miss out! The event is live right now. Click the button above to join instantly:<br>
+      <a href="${params.streamUrl}" style="color: #ef4444; font-weight: 600;">${params.streamUrl}</a>
+    </p>
+  </div>
+
+  <div class="footer">
+    <p>
+      Powered by <strong>ConvertCast</strong><br>
+      <small>You're receiving this because you registered for this event.</small>
+    </p>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Generate NOW LIVE SMS message (when event starts)
+ */
+export function generateNowLiveSms(params: {
+  eventTitle: string;
+  streamUrl: string;
+}): string {
+  return `🔴 LIVE NOW: "${params.eventTitle}" is starting! Join immediately: ${params.streamUrl}`;
+}
+
+/**
  * Strip HTML tags for plain text fallback
  */
 function stripHtml(html: string): string {

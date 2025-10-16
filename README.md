@@ -76,6 +76,11 @@ Visit http://localhost:3009 to see the application.
 ## 🎯 Key Features
 
 ### For Streamers (Studio Dashboard)
+- **Event Lifecycle Management** ⭐ NEW
+  - Create scheduled events with title and description
+  - One-click "Go Live" button creates stream automatically
+  - Studio displays event context (title, description)
+  - Seamless workflow from event creation to live streaming
 - Real-time Mux stream management
 - Live preview with OBS integration
 - Stream health monitoring
@@ -87,6 +92,11 @@ Visit http://localhost:3009 to see the application.
   - Smart Scheduler
 
 ### For Viewers
+- **Pre-Event Experience** ⭐ NEW
+  - Beautiful countdown timer for upcoming events
+  - Displays event title, description, and scheduled start time
+  - Automatically switches to video when event goes live
+  - Smart URL routing (works with both eventId and stream URLs)
 - Low-latency streaming (2-6 second delay)
 - Live chat with reactions
 - Real-time overlays (polls, special offers)

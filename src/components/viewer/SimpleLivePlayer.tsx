@@ -22,6 +22,7 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
     const [showControls, setShowControls] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const hideTimeoutRef = useRef<NodeJS.Timeout>();
+    const shouldLockOrientationRef = useRef(false);
 
     const networkQualities = {
       excellent: { label: 'Excellent', color: 'text-green-400', icon: Wifi },
@@ -89,6 +90,11 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
         );
 
         if (!isCurrentlyFullscreen) {
+          // Set flag to lock orientation after fullscreen is established
+          if (isMobile) {
+            shouldLockOrientationRef.current = true;
+          }
+
           if (elem.requestFullscreen) {
             await elem.requestFullscreen();
           } else if (elem.webkitRequestFullscreen) {
@@ -101,18 +107,9 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
             elem.msRequestFullscreen();
           }
           setIsFullscreen(true);
-
-          // Lock orientation to landscape on mobile
-          if (isMobile && screen.orientation?.lock) {
-            try {
-              await screen.orientation.lock('landscape').catch((err) => {
-                console.log('Orientation lock not supported or failed:', err);
-              });
-            } catch (err) {
-              console.log('Orientation lock API not available');
-            }
-          }
         } else {
+          shouldLockOrientationRef.current = false;
+
           if (doc.exitFullscreen) {
             await doc.exitFullscreen();
           } else if (doc.webkitExitFullscreen) {
@@ -123,15 +120,6 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
             doc.msExitFullscreen();
           }
           setIsFullscreen(false);
-
-          // Unlock orientation when exiting fullscreen on mobile
-          if (isMobile && screen.orientation?.unlock) {
-            try {
-              screen.orientation.unlock();
-            } catch (err) {
-              console.log('Orientation unlock not available');
-            }
-          }
         }
 
         // Haptic feedback
@@ -145,7 +133,7 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
 
     // Listen for fullscreen changes
     useEffect(() => {
-      const handleFullscreenChange = () => {
+      const handleFullscreenChange = async () => {
         const doc: any = document;
         const isFullscreen = !!(
           doc.fullscreenElement ||
@@ -154,6 +142,29 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
           doc.msFullscreenElement
         );
         setIsFullscreen(isFullscreen);
+
+        // Lock orientation to landscape AFTER fullscreen is established on mobile
+        if (isFullscreen && isMobile && shouldLockOrientationRef.current) {
+          shouldLockOrientationRef.current = false; // Reset flag
+          if (screen.orientation?.lock) {
+            try {
+              await screen.orientation.lock('landscape');
+              console.log('✅ Orientation locked to landscape');
+            } catch (err) {
+              console.log('⚠️ Orientation lock not supported or failed:', err);
+            }
+          }
+        }
+
+        // Unlock orientation when exiting fullscreen on mobile
+        if (!isFullscreen && isMobile && screen.orientation?.unlock) {
+          try {
+            screen.orientation.unlock();
+            console.log('✅ Orientation unlocked');
+          } catch (err) {
+            console.log('⚠️ Orientation unlock failed:', err);
+          }
+        }
       };
 
       document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -167,7 +178,7 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
         document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
         document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
       };
-    }, []);
+    }, [isMobile]);
 
     const handleMute = () => {
       if (navigator.vibrate) navigator.vibrate(30);

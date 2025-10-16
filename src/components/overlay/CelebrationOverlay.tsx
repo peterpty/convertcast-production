@@ -83,7 +83,7 @@ export function CelebrationOverlay({ celebration, onComplete, isMobile = false, 
       <AnimatePresence onExitComplete={handleAnimationComplete}>
         {isVisible && (
           <motion.div
-            className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden"
+            className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -92,8 +92,8 @@ export function CelebrationOverlay({ celebration, onComplete, isMobile = false, 
             {/* Instagram-style celebration container */}
             <motion.div
               className={`relative flex flex-col items-center w-full mx-4 ${
-                isMobile && !isLandscape ? 'max-w-[280px]' :
-                isMobile && isLandscape ? 'max-w-sm' :
+                isMobile && !isLandscape ? 'max-w-[200px]' :
+                isMobile && isLandscape ? 'max-w-[240px]' :
                 'max-w-md'
               }`}
               initial={{ scale: 0.3, y: 50 }}
@@ -126,13 +126,13 @@ export function CelebrationOverlay({ celebration, onComplete, isMobile = false, 
                     src={celebration.gifUrl}
                     alt="Celebration"
                     className={`w-full h-auto rounded-2xl shadow-lg ${
-                      isMobile && !isLandscape ? 'max-w-[250px]' :
-                      isMobile && isLandscape ? 'max-w-[300px]' :
+                      isMobile && !isLandscape ? 'max-w-[180px]' :
+                      isMobile && isLandscape ? 'max-w-[220px]' :
                       'max-w-[400px]'
                     }`}
                     style={{
-                      maxHeight: isMobile && !isLandscape ? '180px' :
-                                 isMobile && isLandscape ? '200px' :
+                      maxHeight: isMobile && !isLandscape ? '130px' :
+                                 isMobile && isLandscape ? '160px' :
                                  '300px',
                       objectFit: 'contain',
                       filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))'
@@ -157,8 +157,8 @@ export function CelebrationOverlay({ celebration, onComplete, isMobile = false, 
               {celebration.message && (
                 <motion.div
                   className={`relative rounded-full backdrop-blur-xl shadow-2xl text-center ${
-                    isMobile && !isLandscape ? 'px-6 py-3 max-w-[260px]' :
-                    isMobile && isLandscape ? 'px-7 py-3.5 max-w-xs' :
+                    isMobile && !isLandscape ? 'px-4 py-2 max-w-[180px]' :
+                    isMobile && isLandscape ? 'px-5 py-2.5 max-w-[220px]' :
                     'px-8 py-4 max-w-sm'
                   }`}
                   style={{
@@ -177,8 +177,8 @@ export function CelebrationOverlay({ celebration, onComplete, isMobile = false, 
                   <div className="relative z-10">
                     <span
                       className={`text-white font-bold tracking-wide drop-shadow-lg ${
-                        isMobile && !isLandscape ? 'text-base' :
-                        isMobile && isLandscape ? 'text-lg' :
+                        isMobile && !isLandscape ? 'text-sm' :
+                        isMobile && isLandscape ? 'text-base' :
                         'text-xl'
                       }`}
                       style={{ fontFamily: 'Inter, -apple-system, system-ui, sans-serif' }}

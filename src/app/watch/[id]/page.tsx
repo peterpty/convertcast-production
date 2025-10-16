@@ -712,18 +712,18 @@ export default function LiveViewerPage() {
           <div className={`${isMobileView ? '' : 'grid lg:grid-cols-4 gap-6'}`}>
             {/* Video Player - Unified for Desktop & Mobile */}
             <div className={`${isMobileView ? '' : 'lg:col-span-3'}`}>
-              <div className={`relative ${isMobileView ? '' : 'rounded-2xl shadow-2xl overflow-hidden'}`}>
+              <div className={`relative overflow-hidden ${isMobileView ? '' : 'rounded-2xl shadow-2xl'}`}>
                 <div
                   className={`${
                     isMobileView && orientation.isLandscape
-                      ? 'fixed inset-0 z-40'
+                      ? 'fixed inset-0 z-40 overflow-hidden'
                       : isMobileView
-                      ? 'w-full h-[56vw] max-h-[70vh]'
+                      ? 'w-full h-[56vw] max-h-[70vh] overflow-hidden'
                       : 'aspect-video'
                   }`}
                 >
                   {streamData.mux_playback_id ? (
-                    <div className="relative w-full h-full">
+                    <div className="relative w-full h-full overflow-hidden">
                       {/* SimpleLivePlayer - Clean minimal controls */}
                       <SimpleLivePlayer
                         ref={muxPlayerRef}

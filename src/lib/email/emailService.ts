@@ -1,4 +1,5 @@
-'use client';
+// Server-side email service - DO NOT add 'use client'
+// This must remain server-only to protect API keys
 
 export interface EmailTemplate {
   id: string;
@@ -42,17 +43,27 @@ export interface ScheduledEmail {
  * - Mailgun
  */
 export class EmailService {
-  private provider: 'mock' | 'resend' | 'sendgrid' = 'mock';
+  private provider: 'mock' | 'mailgun' | 'resend' | 'sendgrid' = 'mock';
   private apiKey: string | null = null;
+  private domain: string | null = null;
   private fromEmail: string = 'noreply@convertcast.com';
   private fromName: string = 'ConvertCast';
 
   constructor() {
-    // In production, load from environment variables
-    this.provider = (process.env.NEXT_PUBLIC_EMAIL_PROVIDER as any) || 'mock';
-    this.apiKey = process.env.EMAIL_API_KEY || null;
-    this.fromEmail = process.env.FROM_EMAIL || 'noreply@convertcast.com';
-    this.fromName = process.env.FROM_NAME || 'ConvertCast';
+    // Check for Mailgun configuration (recommended for production)
+    if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
+      this.provider = 'mailgun';
+      this.apiKey = process.env.MAILGUN_API_KEY;
+      this.domain = process.env.MAILGUN_DOMAIN;
+      this.fromEmail = `noreply@${process.env.MAILGUN_DOMAIN}`;
+      this.fromName = 'ConvertCast';
+      console.log('✅ EmailService initialized with Mailgun provider');
+    } else {
+      // Fallback to mock for development
+      this.provider = 'mock';
+      console.log('⚠️ EmailService running in MOCK mode - emails will not be sent');
+      console.log('   Set MAILGUN_API_KEY and MAILGUN_DOMAIN to enable real emails');
+    }
   }
 
   /**
@@ -89,25 +100,51 @@ export class EmailService {
         };
       }
 
-      // Production implementation would go here
-      // Example for Resend:
-      /*
-      if (this.provider === 'resend') {
-        const resend = new Resend(this.apiKey);
-        const result = await resend.emails.send({
-          from: `${this.fromName} <${this.fromEmail}>`,
-          to: recipient.email,
-          subject: renderedSubject,
-          html: renderedHtml,
-          text: renderedText,
-        });
+      // Mailgun implementation (recommended for production)
+      if (this.provider === 'mailgun' && this.apiKey && this.domain) {
+        try {
+          const formData = new FormData();
+          formData.append('from', `${this.fromName} <${this.fromEmail}>`);
+          formData.append('to', recipient.email);
+          formData.append('subject', renderedSubject);
+          formData.append('html', renderedHtml);
+          formData.append('text', renderedText);
 
-        return {
-          success: true,
-          messageId: result.data?.id
-        };
+          const response = await fetch(
+            `https://api.mailgun.net/v3/${this.domain}/messages`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${Buffer.from(`api:${this.apiKey}`).toString('base64')}`
+              },
+              body: formData
+            }
+          );
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Mailgun API error:', errorText);
+            return {
+              success: false,
+              error: `Mailgun error: ${response.status} - ${errorText}`
+            };
+          }
+
+          const result = await response.json();
+          console.log('✅ Email sent via Mailgun:', result.id);
+
+          return {
+            success: true,
+            messageId: result.id
+          };
+        } catch (error) {
+          console.error('Mailgun send error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown Mailgun error'
+          };
+        }
       }
-      */
 
       return { success: false, error: 'Email provider not configured' };
     } catch (error) {

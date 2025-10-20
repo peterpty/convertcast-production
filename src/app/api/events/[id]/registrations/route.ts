@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
 import crypto from 'crypto';
+import { emailService } from '@/lib/email/emailService';
 
 /**
  * GET /api/events/[id]/registrations
@@ -331,6 +332,54 @@ export async function POST(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3009';
     const watchUrl = `${baseUrl}/watch/${eventId}?token=${accessToken}`;
 
+    // Send confirmation email if this was a manual addition
+    if (source === 'manual') {
+      try {
+        console.log('📧 Sending confirmation email to:', email);
+
+        // Format event date and time
+        const eventDate = event.scheduled_start ? new Date(event.scheduled_start) : new Date();
+        const formattedDate = eventDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        const formattedTime = eventDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZoneName: 'short',
+        });
+
+        // Send email
+        const emailResult = await emailService.sendEmail(
+          'event-confirmation',
+          {
+            email: viewerProfile.email,
+            name: `${viewerProfile.first_name} ${viewerProfile.last_name}`,
+          },
+          {
+            attendeeName: viewerProfile.first_name,
+            eventTitle: event.title,
+            eventDate: formattedDate,
+            eventTime: formattedTime,
+            joinUrl: watchUrl,
+            calendarUrl: `${baseUrl}/api/events/${eventId}/calendar?token=${accessToken}`,
+          }
+        );
+
+        if (emailResult.success) {
+          console.log('✅ Confirmation email sent successfully');
+        } else {
+          console.error('⚠️ Failed to send confirmation email:', emailResult.error);
+          // Don't fail the request if email fails - log it and continue
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending confirmation email:', emailError);
+        // Don't fail the request if email fails - log it and continue
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -340,6 +389,7 @@ export async function POST(
           viewer_profiles: viewerProfile,
           watch_url: watchUrl,
         },
+        email_sent: source === 'manual', // Indicate if email was sent
       },
       { status: 201 }
     );

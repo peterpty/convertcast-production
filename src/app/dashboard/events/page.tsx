@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { AttendeeManagement } from '@/components/events/AttendeeManagement';
 import NotificationSettingsModal from '@/components/events/NotificationSettingsModal';
+import toast from 'react-hot-toast';
 import {
   Plus,
   Calendar,
@@ -125,7 +126,7 @@ export default function EventsPage() {
 
       // Validate required fields
       if (!createFormData.title || !createFormData.date || !createFormData.time) {
-        alert('Please fill in all required fields (Title, Date, Time)');
+        toast.error('Please fill in all required fields (Title, Date, Time)');
         return;
       }
 
@@ -171,10 +172,10 @@ export default function EventsPage() {
       setShowCreateModal(false);
 
       // Show success message
-      alert('Event created successfully!');
+      toast.success('Event created successfully!');
     } catch (error) {
       console.error('❌ Failed to create event:', error);
-      alert(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreating(false);
     }
@@ -205,10 +206,10 @@ export default function EventsPage() {
         e.id === eventId ? { ...e, status: 'scheduled' } : e
       ));
 
-      alert('Event scheduled successfully! You can now go live or add registrants.');
+      toast.success('Event scheduled successfully! You can now go live or add registrants.');
     } catch (error) {
       console.error('❌ Failed to schedule event:', error);
-      alert(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -235,7 +236,7 @@ export default function EventsPage() {
       window.location.href = `/dashboard/stream/studio?eventId=${eventId}&streamId=${data.stream.id}`;
     } catch (error) {
       console.error('❌ Failed to go live:', error);
-      alert(`Failed to go live: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to go live: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setGoingLive(prev => ({ ...prev, [eventId]: false }));
     }
   };
@@ -252,7 +253,7 @@ export default function EventsPage() {
     const baseUrl = window.location.origin;
     const watchUrl = `${baseUrl}/watch/${eventId}`;
     navigator.clipboard.writeText(watchUrl);
-    alert('Watch URL copied to clipboard!');
+    toast.success('Watch URL copied to clipboard!');
   };
 
   const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
@@ -281,10 +282,10 @@ export default function EventsPage() {
       // Remove event from local state
       setEvents(prev => prev.filter(e => e.id !== eventId));
 
-      alert('Event deleted successfully');
+      toast.success('Event deleted successfully');
     } catch (error) {
       console.error('❌ Failed to delete event:', error);
-      alert(`Failed to delete event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to delete event: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -412,7 +413,7 @@ export default function EventsPage() {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-6 mb-6">
+            <div className="grid md:grid-cols-3 gap-6 mb-6">
               <div className="bg-slate-900/50 border border-purple-500/20 rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar className="w-5 h-5 text-purple-400" />
@@ -461,15 +462,6 @@ export default function EventsPage() {
                     }}
                   />
                 </div>
-              </div>
-
-              <div className="bg-slate-900/50 border border-purple-500/20 rounded-2xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Settings className="w-5 h-5 text-orange-400" />
-                  <span className="text-purple-300 text-sm">AI Features</span>
-                </div>
-                <div className="text-white font-semibold">6/6 Active</div>
-                <div className="text-green-400 text-sm">All optimized</div>
               </div>
             </div>
 

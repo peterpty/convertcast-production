@@ -315,7 +315,12 @@ export async function POST(
     if (regError || !registration) {
       console.error('❌ Error creating registration:', regError);
       return NextResponse.json(
-        { success: false, error: 'Failed to create registration' },
+        {
+          success: false,
+          error: 'Failed to create registration',
+          details: regError?.message || 'Unknown error',
+          code: regError?.code
+        },
         { status: 500 }
       );
     }

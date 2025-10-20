@@ -314,13 +314,23 @@ export async function POST(
       .single();
 
     if (regError || !registration) {
-      console.error('❌ Error creating registration:', regError);
+      // Enhanced error logging for debugging RLS and constraint issues
+      console.error('❌ Error creating registration:', {
+        error: regError,
+        code: regError?.code,
+        message: regError?.message,
+        details: regError?.details,
+        hint: regError?.hint,
+        eventId,
+        viewerProfileId: viewerProfile.id,
+      });
       return NextResponse.json(
         {
           success: false,
           error: 'Failed to create registration',
-          details: regError?.message || 'Unknown error',
-          code: regError?.code
+          details: regError?.message || regError?.details || 'Unknown error',
+          code: regError?.code,
+          hint: regError?.hint
         },
         { status: 500 }
       );

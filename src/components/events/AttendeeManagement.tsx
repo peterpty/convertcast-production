@@ -241,7 +241,9 @@ export function AttendeeManagement({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to add attendee');
+        // Show detailed error message for better debugging
+        const errorMessage = data.details || data.error || 'Failed to add attendee';
+        throw new Error(errorMessage);
       }
 
       console.log('✅ Attendee added:', data.registration);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Users,
   Mail,
@@ -213,7 +214,7 @@ export function AttendeeManagement({
       // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(quickEmail)) {
-        alert('Please enter a valid email address');
+        toast.error('Please enter a valid email address');
         return;
       }
 
@@ -247,13 +248,13 @@ export function AttendeeManagement({
 
       // Clear input and reload attendee data
       setQuickEmail('');
-      alert(`Successfully added ${quickEmail} to the event!`);
+      toast.success(`Successfully added ${quickEmail} to the event!`);
 
       // TODO: Reload real attendee data from API
       // For now, this adds to mock data
     } catch (error) {
       console.error('❌ Failed to add attendee:', error);
-      alert(`Failed to add attendee: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to add attendee: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setAddingEmail(false);
     }

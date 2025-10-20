@@ -110,35 +110,58 @@ export class EmailService {
           formData.append('html', renderedHtml);
           formData.append('text', renderedText);
 
+          // Use btoa() instead of Buffer.from() for universal compatibility
+          // Works in Node.js, Edge runtime, and browsers
+          const authHeader = `Basic ${btoa(`api:${this.apiKey}`)}`;
+
           const response = await fetch(
             `https://api.mailgun.net/v3/${this.domain}/messages`,
             {
               method: 'POST',
               headers: {
-                'Authorization': `Basic ${Buffer.from(`api:${this.apiKey}`).toString('base64')}`
+                'Authorization': authHeader
               },
               body: formData
             }
           );
 
+          // Handle both success and error responses properly
+          const contentType = response.headers.get('content-type');
+          const isJson = contentType?.includes('application/json');
+
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Mailgun API error:', errorText);
+            // Mailgun may return HTML or JSON for errors
+            const errorText = isJson ? JSON.stringify(await response.json()) : await response.text();
+            console.error('❌ Mailgun API error:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText,
+              recipient: recipient.email
+            });
             return {
               success: false,
-              error: `Mailgun error: ${response.status} - ${errorText}`
+              error: `Mailgun error (${response.status}): ${errorText.substring(0, 200)}`
             };
           }
 
-          const result = await response.json();
-          console.log('✅ Email sent via Mailgun:', result.id);
+          // Parse successful response
+          const result = isJson ? await response.json() : { id: 'unknown', message: await response.text() };
+          console.log('✅ Email sent via Mailgun:', {
+            messageId: result.id,
+            to: recipient.email,
+            subject: renderedSubject
+          });
 
           return {
             success: true,
-            messageId: result.id
+            messageId: result.id || result.message
           };
         } catch (error) {
-          console.error('Mailgun send error:', error);
+          console.error('❌ Mailgun send error:', {
+            error,
+            recipient: recipient.email,
+            provider: this.provider
+          });
           return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown Mailgun error'

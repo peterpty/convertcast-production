@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { analytics } from '@/lib/monitoring/analytics';
 
 interface Props {
@@ -96,7 +97,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Copy to clipboard for user
     navigator.clipboard.writeText(JSON.stringify(bugReport, null, 2)).then(() => {
-      alert('Bug report data copied to clipboard. Please paste it when reporting the issue.');
+      toast.success('Bug report data copied to clipboard. Please paste it when reporting the issue.');
     });
   };
 

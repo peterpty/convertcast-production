@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { use } from 'react';
+import toast from 'react-hot-toast';
 
 interface EventData {
   id: string;
@@ -195,7 +196,7 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ id
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(watchUrl);
-                  alert('Watch link copied to clipboard!');
+                  toast.success('Watch link copied to clipboard!');
                 }}
                 className="block w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition-all text-center"
               >

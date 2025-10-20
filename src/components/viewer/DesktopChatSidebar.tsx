@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Send, Lock, Unlock, MessageSquare, Pin, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 interface ChatMessage {
   id: string;
@@ -94,7 +95,7 @@ const DesktopChatSidebar: React.FC<DesktopChatSidebarProps> = memo(({
         error_stack: error?.stack,
         full_error: error
       });
-      alert(`Failed to send: ${error?.message || 'Unknown error'}`);
+      toast.error(`Failed to send: ${error?.message || 'Unknown error'}`);
     } finally {
       setIsSending(false);
     }

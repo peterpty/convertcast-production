@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { SmartScheduler, ScheduleRecommendation } from '@/lib/ai/smartScheduler';
 import {
@@ -309,7 +310,7 @@ export default function CreateEventPage() {
                 <button
                   onClick={() => {
                     // This would open the SmartScheduler
-                    alert('AI Scheduler integration coming in next iteration');
+                    toast.info('AI Scheduler integration coming in next iteration');
                   }}
                   className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition-all"
                 >

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { Socket } from 'socket.io-client';
 import { Lock, Unlock, Pin, PinOff, Reply } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { ChatService } from '@/lib/supabase/chatService';
 import { HotLeadPanel } from '@/components/ai/HotLeadPanel';
 import { AILiveChat } from '@/components/ai/AILiveChat';
@@ -408,7 +409,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
         stream_id: stream?.id,
         stream_keys: stream ? Object.keys(stream) : []
       });
-      alert('Error: Stream ID not available. Please refresh the page.');
+      toast.error('Error: Stream ID not available. Please refresh the page.');
       return;
     }
 
@@ -443,7 +444,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
         setReplyContext(null); // Clear reply context
       } else {
         console.error('❌ ChatService returned null - message not saved');
-        alert('Failed to send message. Please try again.');
+        toast.error('Failed to send message. Please try again.');
       }
     } catch (error: any) {
       console.error('❌ HOST SEND ERROR:', {
@@ -451,7 +452,7 @@ function RightPanelComponent({ streamId, socket, connected, stream, onOverlayTri
         error_stack: error?.stack,
         full_error: error
       });
-      alert(`Failed to send message: ${error?.message || 'Unknown error'}`);
+      toast.error(`Failed to send message: ${error?.message || 'Unknown error'}`);
     }
   };
 

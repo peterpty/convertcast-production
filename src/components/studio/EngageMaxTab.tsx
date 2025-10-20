@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import toast from 'react-hot-toast';
 import type { Database } from '@/types/database';
 
 type Stream = Database['public']['Tables']['streams']['Row'];
@@ -49,7 +50,7 @@ export function EngageMaxTab({ stream, overlayState, onAction, onUpdate }: Engag
 
   const handleStartPoll = () => {
     if (!newPollQuestion.trim() || newPollOptions.filter(opt => opt.trim()).length < 2) {
-      alert('Please enter a question and at least 2 options');
+      toast.error('Please enter a question and at least 2 options');
       return;
     }
 

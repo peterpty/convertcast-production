@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { type MuxLiveStream } from '@/lib/streaming/muxProductionService';
 import {
   Settings,
@@ -93,7 +94,7 @@ export function StreamSetupWizard({ stream, onSetupComplete }: StreamSetupWizard
       } catch (error) {
         console.error('❌ PRODUCTION ERROR - Failed to initialize stream:', error);
         // Show error to user - no fallback in production
-        alert(`PRODUCTION ERROR: Failed to initialize streaming. Please check your Mux credentials.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toast.error(`PRODUCTION ERROR: Failed to initialize streaming. Please check your Mux credentials.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
         throw error;
       }
     }
@@ -632,7 +633,7 @@ export function StreamSetupWizard({ stream, onSetupComplete }: StreamSetupWizard
                     onSetupComplete(data.stream.id);
                   } catch (error) {
                     console.error('❌ Failed to save stream:', error);
-                    alert(`Failed to save stream: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    toast.error(`Failed to save stream: ${error instanceof Error ? error.message : 'Unknown error'}`);
                   }
                 }}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-red-500/30 transition-all duration-200 flex items-center gap-2"

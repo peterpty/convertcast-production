@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { CelebrationPreset, CelebrationState, defaultCelebrationPresets, replacePlaceholders } from '../overlay/CelebrationOverlay';
 
 interface CelebrationControlsProps {
@@ -60,7 +61,7 @@ export function CelebrationControls({ onTriggerCelebration, enabled, onToggleEna
 
   const handleSavePreset = () => {
     if (presets.length >= 5) {
-      alert('Maximum 5 presets allowed. Delete one to add another.');
+      toast.error('Maximum 5 presets allowed. Delete one to add another.');
       return;
     }
 

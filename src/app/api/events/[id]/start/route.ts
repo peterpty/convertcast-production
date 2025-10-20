@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { CookieOptions } from '@supabase/ssr';
+import { emailService } from '@/lib/email/emailService';
 
 /**
  * POST /api/events/[id]/start
@@ -184,11 +185,11 @@ export async function POST(
         .from('registrations')
         .select(`
           id,
+          access_token,
           viewer_profile_id,
           viewer_profiles (
             id,
             email,
-            phone,
             first_name,
             last_name
           )
@@ -200,107 +201,59 @@ export async function POST(
       } else if (registrations && registrations.length > 0) {
         console.log(`📋 Found ${registrations.length} registrants to notify`);
 
-        // Import notification functions
-        const {
-          sendBatchEmails,
-          sendBatchSms,
-          generateNowLiveEmailHtml,
-          generateNowLiveSms,
-          isValidEmail,
-          isValidPhone,
-          formatPhoneNumber,
-        } = await import('@/lib/notifications/notificationService');
-
-        // Get user's name for email
-        const { data: userData } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', user.id)
-          .single();
-
-        const streamerName = userData?.name || 'Your host';
-
-        // Build viewer URL (use eventId so countdown works)
+        // Build base URL
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3009';
-        const viewerUrl = `${baseUrl}/watch/${eventId}`;
 
-        // Prepare email list
-        const emails = registrations
-          .filter(reg => reg.viewer_profiles && isValidEmail(reg.viewer_profiles.email))
+        // Prepare recipients for bulk email send
+        const recipients = registrations
+          .filter(reg => reg.viewer_profiles?.email)
           .map(reg => {
-            const profile = reg.viewer_profiles;
+            const profile = reg.viewer_profiles!;
+            const watchUrl = `${baseUrl}/watch/${eventId}?token=${reg.access_token}`;
+
             return {
-              to: profile.email,
-              subject: `🔴 LIVE NOW: ${event.title}`,
-              html: generateNowLiveEmailHtml({
+              email: profile.email,
+              name: `${profile.first_name} ${profile.last_name}`,
+              variables: {
+                attendeeName: profile.first_name,
                 eventTitle: event.title,
-                streamUrl: viewerUrl,
-                streamerName,
-                firstName: profile.first_name,
-              }),
-              tags: ['now-live', 'event-notification'],
-              trackOpens: true,
-              trackClicks: true,
+                joinUrl: watchUrl,
+              },
             };
           });
 
-        // Prepare SMS list
-        const smsMessages = registrations
-          .filter(reg => reg.viewer_profiles && isValidPhone(reg.viewer_profiles.phone))
-          .map(reg => {
-            const profile = reg.viewer_profiles;
-            return {
-              to: formatPhoneNumber(profile.phone),
-              body: generateNowLiveSms({
-                eventTitle: event.title,
-                streamUrl: viewerUrl,
-              }),
-            };
-          });
+        console.log(`📧 Sending NOW LIVE emails to ${recipients.length} attendees...`);
 
-        console.log(`📧 Sending ${emails.length} emails and ${smsMessages.length} SMS messages...`);
-
-        // Send notifications in parallel
-        const [emailResults, smsResults] = await Promise.all([
-          emails.length > 0 ? sendBatchEmails(emails, 100, 1000) : Promise.resolve([]),
-          smsMessages.length > 0 ? sendBatchSms(smsMessages, 50, 1000) : Promise.resolve([]),
-        ]);
+        // Send bulk emails using emailService
+        const emailResults = await emailService.sendBulkEmails(
+          'live-starting',
+          recipients
+        );
 
         // Count successes and failures
         const emailSuccess = emailResults.filter(r => r.success).length;
         const emailFailed = emailResults.filter(r => !r.success).length;
-        const smsSuccess = smsResults.filter(r => r.success).length;
-        const smsFailed = smsResults.filter(r => !r.success).length;
 
-        console.log('✅ Notification results:', {
-          emails: { sent: emailSuccess, failed: emailFailed },
-          sms: { sent: smsSuccess, failed: smsFailed },
+        console.log('✅ NOW LIVE email results:', {
+          sent: emailSuccess,
+          failed: emailFailed,
+          total: recipients.length,
         });
-
-        // Update analytics with notification counts
-        await supabase
-          .from('event_analytics')
-          .update({
-            notifications_sent: (emailSuccess + smsSuccess),
-          })
-          .eq('event_id', eventId);
 
         // Create notification record
         await supabase
           .from('event_notifications')
           .insert({
             event_id: eventId,
-            notification_type: 'now_live',
-            notification_timing: 'immediate',
-            template_name: 'now_live',
+            notification_type: 'email',
+            notification_timing: 'now_live',
+            template_name: 'live_starting',
             scheduled_time: new Date().toISOString(),
-            recipients_count: registrations.length,
-            sent_count: emailSuccess + smsSuccess,
-            failed_count: emailFailed + smsFailed,
+            recipients_count: recipients.length,
             status: 'sent',
           });
 
-        console.log(`✅ NOW LIVE notifications sent: ${emailSuccess + smsSuccess}/${registrations.length}`);
+        console.log(`✅ NOW LIVE notifications sent: ${emailSuccess}/${recipients.length}`);
       } else {
         console.log('ℹ️ No registrants found for this event');
       }

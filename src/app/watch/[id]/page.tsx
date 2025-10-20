@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase/client';
 import { ChatService } from '@/lib/supabase/chatService';
 import type { Database } from '@/types/database';
@@ -629,7 +630,7 @@ export default function LiveViewerPage() {
         streamData_id: streamData?.id,
         streamData_keys: streamData ? Object.keys(streamData) : []
       });
-      alert('Error: Stream ID not available. Please refresh the page.');
+      toast.error('Error: Stream ID not available. Please refresh the page.');
       return;
     }
 
@@ -660,7 +661,7 @@ export default function LiveViewerPage() {
         console.log('✅ Viewer message saved successfully:', result.id);
       } else {
         console.error('❌ ChatService returned null - message not saved');
-        alert('Failed to send message. Please try again.');
+        toast.error('Failed to send message. Please try again.');
       }
     } catch (error: any) {
       console.error('❌ VIEWER SEND ERROR:', {
@@ -668,7 +669,7 @@ export default function LiveViewerPage() {
         error_stack: error?.stack,
         full_error: error
       });
-      alert(`Failed to send message: ${error?.message || 'Unknown error'}`);
+      toast.error(`Failed to send message: ${error?.message || 'Unknown error'}`);
     }
 
     // ✅ NO WebSocket broadcast - Supabase Realtime handles it with proper filtering

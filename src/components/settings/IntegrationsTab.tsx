@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Mail,
   MessageSquare,
@@ -100,11 +101,12 @@ export function IntegrationsTab() {
 
       if (data.success) {
         setIntegrations(integrations.filter((i) => i.id !== id));
+        toast.success('Integration removed successfully');
       } else {
-        alert(data.error || 'Failed to delete integration');
+        toast.error(data.error || 'Failed to delete integration');
       }
     } catch (err) {
-      alert('Network error - please try again');
+      toast.error('Network error - please try again');
       console.error('Failed to delete integration:', err);
     }
   };
@@ -125,11 +127,12 @@ export function IntegrationsTab() {
             i.id === id ? { ...i, is_active: !isActive } : i
           )
         );
+        toast.success(`Integration ${!isActive ? 'activated' : 'paused'} successfully`);
       } else {
-        alert(data.error || 'Failed to update integration');
+        toast.error(data.error || 'Failed to update integration');
       }
     } catch (err) {
-      alert('Network error - please try again');
+      toast.error('Network error - please try again');
       console.error('Failed to toggle integration:', err);
     }
   };
@@ -143,13 +146,13 @@ export function IntegrationsTab() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ Synced ${data.syncedCount} contacts successfully!`);
+        toast.success(`Synced ${data.syncedCount} contacts successfully!`);
         fetchIntegrations(); // Refresh list
       } else {
-        alert(data.error || 'Failed to sync contacts');
+        toast.error(data.error || 'Failed to sync contacts');
       }
     } catch (err) {
-      alert('Network error - please try again');
+      toast.error('Network error - please try again');
       console.error('Failed to sync contacts:', err);
     }
   };

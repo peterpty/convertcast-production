@@ -27,12 +27,6 @@ export const metadata: Metadata = {
     shortcut: '/logo.svg',
     apple: '/logo.svg',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -41,6 +35,14 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+};
+
+// Next.js 15 requires viewport to be exported separately
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

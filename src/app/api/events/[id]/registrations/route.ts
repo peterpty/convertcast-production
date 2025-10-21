@@ -342,10 +342,19 @@ export async function POST(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3009';
     const watchUrl = `${baseUrl}/watch/${eventId}?token=${accessToken}`;
 
+    // 🔍 DEBUG: Log email sending configuration
+    console.log('🔍 EMAIL DEBUG - Registration source:', source);
+    console.log('🔍 EMAIL DEBUG - Will attempt to send email:', source === 'manual');
+    console.log('🔍 EMAIL DEBUG - Base URL:', baseUrl);
+    console.log('🔍 EMAIL DEBUG - Watch URL:', watchUrl);
+
     // Send confirmation email if this was a manual addition
     if (source === 'manual') {
       try {
         console.log('📧 Sending confirmation email to:', email);
+        console.log('🔍 EMAIL DEBUG - Email service provider:', (emailService as any).provider || 'unknown');
+        console.log('🔍 EMAIL DEBUG - Has Mailgun API key:', !!process.env.MAILGUN_API_KEY);
+        console.log('🔍 EMAIL DEBUG - Has Mailgun domain:', !!process.env.MAILGUN_DOMAIN);
 
         // Format event date and time
         const eventDate = event.scheduled_start ? new Date(event.scheduled_start) : new Date();
@@ -362,6 +371,7 @@ export async function POST(
         });
 
         // Send email
+        console.log('🔍 EMAIL DEBUG - About to call emailService.sendEmail()...');
         const emailResult = await emailService.sendEmail(
           'event-confirmation',
           {
@@ -378,6 +388,12 @@ export async function POST(
           }
         );
 
+        console.log('🔍 EMAIL DEBUG - Email result:', {
+          success: emailResult.success,
+          messageId: emailResult.messageId,
+          error: emailResult.error,
+        });
+
         if (emailResult.success) {
           console.log('✅ Confirmation email sent successfully');
         } else {
@@ -386,8 +402,14 @@ export async function POST(
         }
       } catch (emailError) {
         console.error('❌ Error sending confirmation email:', emailError);
+        console.error('🔍 EMAIL DEBUG - Exception details:', {
+          message: emailError instanceof Error ? emailError.message : 'Unknown error',
+          stack: emailError instanceof Error ? emailError.stack : undefined,
+        });
         // Don't fail the request if email fails - log it and continue
       }
+    } else {
+      console.log('ℹ️ Email NOT sent - source is not "manual":', source);
     }
 
     return NextResponse.json(

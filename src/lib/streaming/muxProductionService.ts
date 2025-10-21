@@ -90,14 +90,20 @@ export class MuxProductionService {
       const liveStream = await this.mux.video.liveStreams.create({
         playback_policy: 'public',
         latency_mode: 'low', // Enable low-latency mode (2-6s delay vs 10-30s standard)
+        encoding_tier: 'plus', // High-quality encoding tier (supports up to 1080p with better bitrate)
+        max_resolution: '1080p', // Cap at 1080p (standard for professional streams)
+        reconnect_window: 60, // Allow 60 seconds for stream reconnection
         new_asset_settings: {
-          playback_policy: 'public'
+          playback_policy: 'public',
+          mp4_support: 'standard' // Enable MP4 downloads for recordings
         },
         max_continuous_duration: 10800, // 3 hours
         metadata: {
           event_title: eventTitle.trim(),
           created_by: 'ConvertCast-Production',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          encoding_tier: 'plus',
+          max_resolution: '1080p'
         }
       });
 

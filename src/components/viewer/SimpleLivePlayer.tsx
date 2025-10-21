@@ -191,12 +191,15 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
         className={`relative bg-black overflow-hidden ${className}`}
         style={{ cursor: showControls ? 'default' : 'none' }}
       >
-        {/* MuxPlayer - Controls Fully Disabled */}
+        {/* MuxPlayer - Controls Fully Disabled with High-Quality Settings */}
         <MuxPlayer
           ref={ref}
           streamType="live"
           playbackId={playbackId}
           targetLiveWindow={0}
+          preferPlayback="mse"
+          startLevel={-1}
+          minResolution="480p"
           metadata={{
             video_id: streamId,
             video_title: streamTitle,

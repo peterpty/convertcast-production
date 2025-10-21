@@ -257,7 +257,7 @@ export function LivePreview({ streamId, overlayState, viewerCount, muxPlaybackId
             {/* HLS Video Element */}
             <video
               ref={videoRef}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               autoPlay
               muted
               playsInline

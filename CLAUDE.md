@@ -2,11 +2,11 @@
 
 **⚠️ CRITICAL: Before fixing bugs or adding features, read [LESSONS_LEARNED.md](./LESSONS_LEARNED.md)**
 
-**Last Updated:** 2025-10-16
+**Last Updated:** 2025-10-21
 **Development Server:** http://localhost:3009
-**Production Status:** ✅ PRODUCTION READY - All systems operational
+**Production Status:** 🟡 EMAIL WORKFLOW IN PROGRESS - See EMAIL_WORKFLOW_STATUS.md
 **Current Branch:** `clean-production-v2`
-**Latest Deploy:** Commit `9203cd5` - Event Lifecycle Workflow Complete
+**Latest Deploy:** Commit `4a81510` - Email service debug logging added
 
 ---
 
@@ -28,6 +28,7 @@
 **Key Files to Reference:**
 - `LESSONS_LEARNED.md` - **Read this first** before any bug fix
 - `CLAUDE.md` - This file - Current system status
+- `EMAIL_WORKFLOW_STATUS.md` - **Email registration workflow** - Current progress and next steps
 - `README.md` - Project setup and overview
 - `DEPLOYMENT.md` - Production deployment guide
 - `MUX_SETUP_GUIDE.md` - Mux video streaming configuration
@@ -111,6 +112,22 @@ npm run dev  # Starts on http://localhost:3009
 4. Viewers see countdown timer until event starts
 5. When live, countdown switches to video player automatically
 6. Event context maintained throughout entire workflow
+
+#### **Email Registration Workflow** 🟡 IN PROGRESS (See EMAIL_WORKFLOW_STATUS.md)
+- ✅ **Email Service Integration** - Mailgun API configured and tested
+- ✅ **Confirmation Emails** - Sent when hosts manually add attendees
+- ✅ **NOW LIVE Emails** - Sent to all registrants when event goes live
+- ✅ **RLS Policies Fixed** - Registration creation working properly
+- ✅ **Database Constraints Updated** - Source field supports 'manual'
+- ✅ **Debug Logging Added** - Comprehensive server-side email tracking
+- 🟡 **Vercel Environment Variables** - **NEEDS CONFIGURATION** (blocking emails)
+- ⏳ **Phase 2: User-Specific Integration** - Planned (each streamer has own API keys)
+
+**Current Status:** Email code is fully functional and calling Mailgun API, but getting 401 errors because Mailgun credentials are not configured in Vercel production environment.
+
+**Immediate Action Required:** Add `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, and `NEXT_PUBLIC_APP_URL` to Vercel environment variables, then redeploy.
+
+**Full Details:** See [EMAIL_WORKFLOW_STATUS.md](./EMAIL_WORKFLOW_STATUS.md) for complete progress, troubleshooting, and Phase 2 implementation plan.
 
 ---
 
@@ -404,6 +421,7 @@ git push --force  # Only use after git reset --hard
 - `MUX_SETUP_GUIDE.md` - Mux streaming configuration
 
 **Feature Documentation:**
+- `EMAIL_WORKFLOW_STATUS.md` - **Email workflow** - Complete status, troubleshooting, Phase 2 plan
 - `EVENT_SYSTEM_DOCUMENTATION.md` - Event notifications
 - `WEBSOCKET_DEBUG_GUIDE.md` - WebSocket debugging
 - `AUTHENTICATION_COMPLETE_SUMMARY.md` - Auth system
@@ -426,11 +444,38 @@ git push --force  # Only use after git reset --hard
 
 ---
 
-**Last Stable Commit:** `9203cd5` - "feat: Complete event lifecycle workflow - Go Live to Viewer Experience"
-**Production Status:** 🟢 EVENT LIFECYCLE DEPLOYED - Ready for Testing
-**Next Priority:** Test complete event workflow, then implement chat real names and NOW LIVE notifications
+**Last Stable Commit:** `4a81510` - "debug: Add comprehensive email service logging to registration API"
+**Production Status:** 🟡 EMAIL WORKFLOW IN PROGRESS - Mailgun 401 error (env vars needed)
+**Next Priority:** Configure Mailgun env vars in Vercel → Test email delivery → Remove debug logs → Phase 2: User-specific email integration
 
 **Remember: Production stability > moving fast. Test thoroughly.**
+
+---
+
+## 📧 **EMAIL WORKFLOW QUICK STATUS** (2025-10-21)
+
+**What's Working:**
+- ✅ Email service code fully integrated with Mailgun API
+- ✅ Confirmation emails configured for manual attendee additions
+- ✅ NOW LIVE emails configured for event start
+- ✅ Debug logging shows email sending attempts
+
+**What's Blocking:**
+- ❌ Mailgun returning 401 Unauthorized errors
+- ❌ Environment variables NOT configured in Vercel production
+- ❌ Emails not being delivered (but code is working!)
+
+**Immediate Next Step:**
+1. Add these env vars to Vercel → Settings → Environment Variables:
+   - `MAILGUN_API_KEY`: `335e646a6310fa0fb1460dc0a868a19d`
+   - `MAILGUN_DOMAIN`: `mail.convertcast.com`
+   - `NEXT_PUBLIC_APP_URL`: `https://www.convertcast.app`
+2. Redeploy from Vercel dashboard
+3. Test attendee addition → Check Vercel logs for "✅ Email sent via Mailgun"
+4. Verify email received in inbox
+5. Remove debug logs
+
+**Full Status:** See [EMAIL_WORKFLOW_STATUS.md](./EMAIL_WORKFLOW_STATUS.md) for complete details, troubleshooting guide, and Phase 2 implementation plan.
 
 ---
 

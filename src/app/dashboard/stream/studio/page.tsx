@@ -66,8 +66,8 @@ export default function StreamStudioPage() {
         }
 
         // Check if stream was created before the final fix deployment
-        // Only recreate streams created before we fixed the StudioDashboard loading
-        const finalFixDeployedAt = new Date('2025-10-05T18:00:00Z'); // Today 6pm
+        // Only recreate streams created before we fixed the video quality settings
+        const finalFixDeployedAt = new Date('2025-10-22T20:00:00Z'); // Force recreation after quality fix (Oct 22)
         const isOldStream = stream && new Date(stream.created_at) < finalFixDeployedAt;
 
         // Also check for known shared keys
@@ -85,6 +85,7 @@ export default function StreamStudioPage() {
           streamId: stream?.id,
           streamKey: stream?.stream_key,
           createdAt: stream?.created_at,
+          cutoffDate: finalFixDeployedAt.toISOString(),
           isOld: isOldStream,
           isShared: isSharedKey,
           willRecreate: shouldRecreateStream
@@ -92,9 +93,11 @@ export default function StreamStudioPage() {
 
         if (shouldRecreateStream) {
           console.log('🚨 FORCING FRESH STREAM - Deleting existing stream...');
+          console.log('   Reason:', isOldStream ? 'Created before quality fix (Oct 22)' : 'Shared stream key detected');
           console.log('   Old Stream Key:', stream.stream_key);
           console.log('   Old Stream ID:', stream.id);
           console.log('   Created At:', stream.created_at);
+          console.log('   Cutoff Date:', finalFixDeployedAt.toISOString());
 
           // Delete old stream record
           const { error: deleteError } = await supabase
@@ -193,6 +196,9 @@ export default function StreamStudioPage() {
           console.log('   Stream Key:', createStreamData.stream.stream_key);
           console.log('   Database ID:', createStreamData.stream.database_id);
           console.log('   Event ID:', createStreamData.event_id);
+          console.log('🎬 Quality Settings Applied:');
+          console.log('   Video Quality:', createStreamData.stream.video_quality || 'plus (expected)');
+          console.log('   Latency Mode:', createStreamData.stream.latency_mode || 'low (expected)');
 
           // Step 3: Query the created stream from database (RLS will filter to user's own)
           const { data: newStream, error: newStreamError } = await supabase

@@ -90,20 +90,20 @@ export class MuxProductionService {
       const liveStream = await this.mux.video.liveStreams.create({
         playback_policy: 'public',
         latency_mode: 'low', // Enable low-latency mode (2-6s delay vs 10-30s standard)
-        encoding_tier: 'plus', // High-quality encoding tier (supports up to 1080p with better bitrate)
-        max_resolution: '1080p', // Cap at 1080p (standard for professional streams)
+        video_quality: 'plus', // ✅ FIXED: Use video_quality instead of deprecated encoding_tier
         reconnect_window: 60, // Allow 60 seconds for stream reconnection
         new_asset_settings: {
           playback_policy: 'public',
-          mp4_support: 'standard' // Enable MP4 downloads for recordings
+          mp4_support: 'standard', // Enable MP4 downloads for recordings
+          max_resolution_tier: '1080p' // Cap recordings at 1080p
         },
         max_continuous_duration: 10800, // 3 hours
         metadata: {
           event_title: eventTitle.trim(),
           created_by: 'ConvertCast-Production',
           created_at: new Date().toISOString(),
-          encoding_tier: 'plus',
-          max_resolution: '1080p'
+          video_quality: 'plus',
+          max_resolution_tier: '1080p'
         }
       });
 
@@ -111,8 +111,16 @@ export class MuxProductionService {
         id: liveStream.id,
         stream_key: liveStream.stream_key?.substring(0, 10) + '...',
         playback_ids: liveStream.playback_ids,
-        status: liveStream.status
+        status: liveStream.status,
+        video_quality: liveStream.video_quality || 'not set',
+        latency_mode: liveStream.latency_mode
       }, null, 2));
+
+      // Verify quality settings were applied
+      console.log('🎬 Stream Quality Settings:');
+      console.log('   Video Quality:', liveStream.video_quality || 'basic (default)');
+      console.log('   Latency Mode:', liveStream.latency_mode);
+      console.log('   Max Resolution Tier:', liveStream.new_asset_settings?.max_resolution_tier || 'default');
 
       if (!liveStream.stream_key) {
         throw new Error('Invalid response from Mux API - missing stream key');

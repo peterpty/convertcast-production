@@ -198,8 +198,8 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
           playbackId={playbackId}
           targetLiveWindow={0}
           preferPlayback="mse"
-          startLevel={-1}
           minResolution="480p"
+          maxResolution="1080p"
           metadata={{
             video_id: streamId,
             video_title: streamTitle,
@@ -225,6 +225,15 @@ export const SimpleLivePlayer = forwardRef<any, SimpleLivePlayerProps>(
                   console.log('Auto-resume failed (expected if user-initiated):', err);
                 });
               }, 100);
+            }
+          }}
+          onLoadedMetadata={(e: any) => {
+            // Log available quality levels for debugging
+            const player = e.target;
+            if (player?.mux?.hls?.levels) {
+              const levels = player.mux.hls.levels;
+              console.log('🎬 Available quality levels:', levels.map((l: any) => `${l.height}p @ ${Math.round(l.bitrate / 1000)}kbps`));
+              console.log('🎯 Current quality level:', player.mux.hls.currentLevel);
             }
           }}
           onError={(error) => console.error('Stream error:', error)}

@@ -67,7 +67,7 @@ export default function StreamStudioPage() {
 
         // Check if stream was created before the final fix deployment
         // Only recreate streams created before we fixed the video quality settings
-        const finalFixDeployedAt = new Date('2025-10-22T20:00:00Z'); // Force recreation after quality fix (Oct 22)
+        const finalFixDeployedAt = new Date('2025-10-22T17:14:00Z'); // 5:14pm UTC - just after quality fix (c287a89) deployed at 5:13pm UTC
         const isOldStream = stream && new Date(stream.created_at) < finalFixDeployedAt;
 
         // Also check for known shared keys

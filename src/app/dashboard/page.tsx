@@ -270,11 +270,55 @@ export default function UnifiedDashboard() {
         </div>
       </motion.div>
 
-      {/* Quick Actions */}
+      {/* Key Metrics */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-6 mb-6 sm:mb-8"
+      >
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.totalViewers.toLocaleString()}</div>
+          <div className="text-xs sm:text-sm text-purple-300">Total Viewers</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">${metrics.totalRevenue.toLocaleString()}</div>
+          <div className="text-xs sm:text-sm text-purple-300">Total Revenue</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.avgEngagement}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Engagement</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.attendanceRate}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Attendance</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Target className="w-6 h-6 sm:w-8 sm:h-8 text-orange-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.conversionRate}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Conversion</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
+          <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 mx-auto mb-2 sm:mb-3" />
+          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.customerSatisfaction}%</div>
+          <div className="text-xs sm:text-sm text-purple-300">Satisfaction</div>
+        </div>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="mb-6 sm:mb-8"
       >
         <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-4 sm:mb-6">
@@ -364,50 +408,6 @@ export default function UnifiedDashboard() {
               </div>
             )}
           </motion.button>
-        </div>
-      </motion.div>
-
-      {/* Key Metrics */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-6 mb-6 sm:mb-8"
-      >
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
-          <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 mx-auto mb-2 sm:mb-3" />
-          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.totalViewers.toLocaleString()}</div>
-          <div className="text-xs sm:text-sm text-purple-300">Total Viewers</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
-          <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 mx-auto mb-2 sm:mb-3" />
-          <div className="text-lg sm:text-2xl font-bold text-white">${metrics.totalRevenue.toLocaleString()}</div>
-          <div className="text-xs sm:text-sm text-purple-300">Total Revenue</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
-          <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 mx-auto mb-2 sm:mb-3" />
-          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.avgEngagement}%</div>
-          <div className="text-xs sm:text-sm text-purple-300">Engagement</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
-          <Bell className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 mx-auto mb-2 sm:mb-3" />
-          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.attendanceRate}%</div>
-          <div className="text-xs sm:text-sm text-purple-300">Attendance</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
-          <Target className="w-6 h-6 sm:w-8 sm:h-8 text-orange-400 mx-auto mb-2 sm:mb-3" />
-          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.conversionRate}%</div>
-          <div className="text-xs sm:text-sm text-purple-300">Conversion</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
-          <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400 mx-auto mb-2 sm:mb-3" />
-          <div className="text-lg sm:text-2xl font-bold text-white">{metrics.customerSatisfaction}%</div>
-          <div className="text-xs sm:text-sm text-purple-300">Satisfaction</div>
         </div>
       </motion.div>
 

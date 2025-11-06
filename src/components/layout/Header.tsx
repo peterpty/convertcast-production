@@ -10,6 +10,7 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const { user, loading, signOut } = useAuth();
 
   useEffect(() => {
@@ -20,6 +21,11 @@ export default function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Reset avatar error state when user changes
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user]);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -51,13 +57,36 @@ export default function Header() {
     return 'User';
   };
 
-  // Get user's avatar URL or generate initials
-  const getUserAvatar = () => {
+  // Get user's avatar URL (for image src)
+  const getUserAvatarUrl = () => {
     if (!user) return null;
-    if (user.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
+    const avatarUrl = user.user_metadata?.avatar_url;
+    // Only return if it's a valid URL
+    if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
+      return avatarUrl;
+    }
+    return null;
+  };
 
-    // Generate initials from name or email
-    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'U';
+  // Generate user initials (for text display)
+  const getUserInitials = () => {
+    if (!user) return 'U';
+
+    // Get clean name, avoiding URLs
+    const fullName = user.user_metadata?.full_name;
+    let name = '';
+
+    // Use full_name only if it's not a URL and is reasonable length
+    if (fullName && typeof fullName === 'string' && !fullName.includes('http') && fullName.length < 50) {
+      name = fullName;
+    } else if (user.email) {
+      // Fallback to email username
+      name = user.email.split('@')[0];
+    }
+
+    if (!name) return 'U';
+
+    // Generate initials
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
@@ -130,8 +159,19 @@ export default function Header() {
                     whileHover={{ scale: 1.02 }}
                   >
                     {/* Avatar */}
-                    <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      {getUserAvatar()}
+                    <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium overflow-hidden">
+                      {getUserAvatarUrl() && !avatarError ? (
+                        <img
+                          src={getUserAvatarUrl()!}
+                          alt="Profile"
+                          className="w-full h-full object-cover rounded-full"
+                          onError={() => setAvatarError(true)}
+                        />
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {getUserInitials()}
+                        </span>
+                      )}
                     </div>
                     <span className="hidden lg:block text-sm font-medium">
                       Welcome, {getUserDisplayName()}
@@ -257,8 +297,19 @@ export default function Header() {
                   <>
                     {/* Mobile User Info */}
                     <div className="flex items-center space-x-3 px-4 py-3 bg-slate-800/50 rounded-lg">
-                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {getUserAvatar()}
+                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium overflow-hidden">
+                        {getUserAvatarUrl() && !avatarError ? (
+                          <img
+                            src={getUserAvatarUrl()!}
+                            alt="Profile"
+                            className="w-full h-full object-cover rounded-full"
+                            onError={() => setAvatarError(true)}
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">
+                            {getUserInitials()}
+                          </span>
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">Welcome, {getUserDisplayName()}</p>

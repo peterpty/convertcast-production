@@ -32,7 +32,23 @@ export default function Header() {
   // Get user's display name or email
   const getUserDisplayName = () => {
     if (!user) return '';
-    return user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+
+    // Safely extract name, avoiding URLs or long strings
+    const fullName = user.user_metadata?.full_name;
+    const email = user.email;
+
+    // If full_name exists and doesn't look like a URL, use it
+    if (fullName && typeof fullName === 'string' && !fullName.includes('http') && fullName.length < 50) {
+      return fullName;
+    }
+
+    // Fallback to email username
+    if (email && typeof email === 'string') {
+      const emailUsername = email.split('@')[0];
+      return emailUsername.length > 20 ? emailUsername.substring(0, 20) + '...' : emailUsername;
+    }
+
+    return 'User';
   };
 
   // Get user's avatar URL or generate initials

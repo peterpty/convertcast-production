@@ -270,11 +270,108 @@ export default function UnifiedDashboard() {
         </div>
       </motion.div>
 
-      {/* Key Metrics */}
+      {/* Quick Actions */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="mb-6 sm:mb-8"
+      >
+        <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-4 sm:mb-6">
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+          <motion.button
+            onClick={() => window.location.href = '/dashboard/stream/studio'}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-center shadow-2xl hover:border-blue-500/40 transition-all duration-300 group touch-manipulation"
+          >
+            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 w-fit mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-200">
+              <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <h4 className="text-sm sm:text-lg font-bold text-white mb-1 sm:mb-2">Launch Studio</h4>
+            <p className="text-purple-200/80 text-xs sm:text-sm hidden sm:block">Start streaming with AI-powered features</p>
+            <p className="text-purple-200/80 text-xs sm:hidden">Start streaming</p>
+          </motion.button>
+
+          <motion.button
+            onClick={() => window.location.href = '/dashboard/analytics'}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl hover:border-purple-500/40 transition-all duration-300 group"
+          >
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <h4 className="text-lg font-bold text-white mb-2">View Analytics</h4>
+            <p className="text-purple-200/80 text-sm">Deep insights with InsightEngine™</p>
+          </motion.button>
+
+          <motion.button
+            onClick={() => window.location.href = '/'}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl hover:border-green-500/40 transition-all duration-300 group"
+          >
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
+              <Settings className="w-6 h-6 text-white" />
+            </div>
+            <h4 className="text-lg font-bold text-white mb-2">Go to Website</h4>
+            <p className="text-purple-200/80 text-sm">Visit ConvertCast homepage</p>
+          </motion.button>
+
+          {/* Test Stream Button */}
+          <motion.button
+            onClick={() => {
+              if (activeStream) {
+                const viewerUrl = `/watch/${activeStream.mux_playback_id || activeStream.id}`;
+                window.open(viewerUrl, '_blank');
+              } else {
+                // Fallback to demo stream for testing
+                window.open('/watch/mux_playback_67890', '_blank');
+              }
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl transition-all duration-300 group ${
+              activeStream ? 'hover:border-orange-500/40' : 'hover:border-gray-500/40'
+            }`}
+            disabled={streamLoading}
+          >
+            <div className={`p-3 rounded-2xl w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200 ${
+              activeStream
+                ? 'bg-gradient-to-br from-orange-500 to-orange-600'
+                : 'bg-gradient-to-br from-gray-500 to-gray-600'
+            }`}>
+              <Eye className="w-6 h-6 text-white" />
+            </div>
+            <h4 className="text-lg font-bold text-white mb-2">
+              {streamLoading ? 'Loading...' : 'Test Stream'}
+            </h4>
+            <p className="text-purple-200/80 text-sm">
+              {activeStream
+                ? `View "${activeStream.events?.title || 'your stream'}" as viewer`
+                : 'Preview viewer experience'
+              }
+            </p>
+            {activeStream && (
+              <div className="mt-2">
+                <div className="flex items-center justify-center gap-1 text-xs">
+                  <ExternalLink className="w-3 h-3" />
+                  <span className="text-orange-300 font-semibold">Opens in new tab</span>
+                </div>
+              </div>
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Key Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-6 mb-6 sm:mb-8"
       >
         <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center active:scale-95 sm:hover:scale-105 transition-transform duration-200 touch-manipulation">
@@ -318,7 +415,7 @@ export default function UnifiedDashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="mb-8"
         >
           <div className="flex items-center justify-between mb-8">
@@ -342,7 +439,7 @@ export default function UnifiedDashboard() {
                 key={feature.name}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
+                transition={{ delay: 0.4 + index * 0.1 }}
                 className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-8 shadow-2xl hover:scale-[1.02] transition-all duration-300 group h-full flex flex-col"
               >
                 {/* Header with Icon and Status */}
@@ -395,7 +492,7 @@ export default function UnifiedDashboard() {
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(feature.performance, 100)}%` }}
-                        transition={{ delay: 0.5 + index * 0.1, duration: 1.5, ease: "easeOut" }}
+                        transition={{ delay: 0.6 + index * 0.1, duration: 1.5, ease: "easeOut" }}
                         className={`h-3 rounded-full ${feature.color.replace('bg-', 'bg-')} shadow-lg`}
                       />
                     </div>
@@ -413,153 +510,6 @@ export default function UnifiedDashboard() {
                 </div>
               </motion.div>
             ))}
-          </div>
-        </motion.div>
-
-        {/* Platform Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-green-500/30 rounded-3xl p-8 shadow-2xl"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                    Production Ready - Zoom Killer Status
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-green-400 font-semibold text-sm">LIVE & OPERATIONAL</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div className="bg-slate-900/50 border border-green-500/20 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-purple-300">Concurrent Users</span>
-                    <span className="text-lg font-bold text-green-400">50,000+</span>
-                  </div>
-                  <div className="text-xs text-purple-200/60">Optimized capacity</div>
-                </div>
-
-                <div className="bg-slate-900/50 border border-green-500/20 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-purple-300">Active Features</span>
-                    <span className="text-lg font-bold text-green-400">6/6</span>
-                  </div>
-                  <div className="text-xs text-purple-200/60">All systems operational</div>
-                </div>
-              </div>
-
-              <p className="text-purple-200/80 leading-relaxed">
-                All 6 branded AI features are operational and exceeding promised performance metrics.
-                Platform infrastructure optimized for enterprise-scale concurrent users with real-time AI optimization.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 sm:mt-8"
-        >
-          <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent mb-4 sm:mb-6">
-            Quick Actions
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-            <motion.button
-              onClick={() => window.location.href = '/dashboard/stream/studio'}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-center shadow-2xl hover:border-blue-500/40 transition-all duration-300 group touch-manipulation"
-            >
-              <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 w-fit mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-200">
-                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <h4 className="text-sm sm:text-lg font-bold text-white mb-1 sm:mb-2">Launch Studio</h4>
-              <p className="text-purple-200/80 text-xs sm:text-sm hidden sm:block">Start streaming with AI-powered features</p>
-              <p className="text-purple-200/80 text-xs sm:hidden">Start streaming</p>
-            </motion.button>
-
-            <motion.button
-              onClick={() => window.location.href = '/dashboard/analytics'}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl hover:border-purple-500/40 transition-all duration-300 group"
-            >
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="text-lg font-bold text-white mb-2">View Analytics</h4>
-              <p className="text-purple-200/80 text-sm">Deep insights with InsightEngine™</p>
-            </motion.button>
-
-            <motion.button
-              onClick={() => window.location.href = '/'}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl hover:border-green-500/40 transition-all duration-300 group"
-            >
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <Settings className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="text-lg font-bold text-white mb-2">Go to Website</h4>
-              <p className="text-purple-200/80 text-sm">Visit ConvertCast homepage</p>
-            </motion.button>
-
-            {/* Test Stream Button */}
-            <motion.button
-              onClick={() => {
-                if (activeStream) {
-                  const viewerUrl = `/watch/${activeStream.mux_playback_id || activeStream.id}`;
-                  window.open(viewerUrl, '_blank');
-                } else {
-                  // Fallback to demo stream for testing
-                  window.open('/watch/mux_playback_67890', '_blank');
-                }
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 text-center shadow-2xl transition-all duration-300 group ${
-                activeStream ? 'hover:border-orange-500/40' : 'hover:border-gray-500/40'
-              }`}
-              disabled={streamLoading}
-            >
-              <div className={`p-3 rounded-2xl w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-200 ${
-                activeStream
-                  ? 'bg-gradient-to-br from-orange-500 to-orange-600'
-                  : 'bg-gradient-to-br from-gray-500 to-gray-600'
-              }`}>
-                <Eye className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="text-lg font-bold text-white mb-2">
-                {streamLoading ? 'Loading...' : 'Test Stream'}
-              </h4>
-              <p className="text-purple-200/80 text-sm">
-                {activeStream
-                  ? `View "${activeStream.events?.title || 'your stream'}" as viewer`
-                  : 'Preview viewer experience'
-                }
-              </p>
-              {activeStream && (
-                <div className="mt-2">
-                  <div className="flex items-center justify-center gap-1 text-xs">
-                    <ExternalLink className="w-3 h-3" />
-                    <span className="text-orange-300 font-semibold">Opens in new tab</span>
-                  </div>
-                </div>
-              )}
-            </motion.button>
           </div>
         </motion.div>
     </DashboardLayout>
